@@ -54,8 +54,89 @@ posts, and a pre-generated briefing with 2 content ideas ready to accept or reje
 | Postgres (DB) | Local Docker container — fully real queries |
 | Anthropic (AI) | Returns fixture responses — no API calls made |
 
-**Switching to real keys:** edit `.env.local`, replace the mock values with your real keys
-from Clerk, Supabase, and Anthropic, then restart `npm run dev`.
+---
+
+## Switching from mock to real services
+
+When you are ready to connect real accounts, do these three steps in order.
+
+### Step 1 — remove the mock flags from `.env.local`
+
+Open `.env.local` and make two changes:
+
+```bash
+# Remove or comment out this line
+MOCK_AUTH=true
+
+# Replace this with your real key
+ANTHROPIC_API_KEY=sk-ant-YOUR_REAL_KEY
+```
+
+### Step 2 — replace each service's placeholder values
+
+**Clerk** — get keys from [dashboard.clerk.com](https://dashboard.clerk.com) → API Keys:
+```
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...   ← replace mock_placeholder
+CLERK_SECRET_KEY=sk_test_...                     ← replace mock_placeholder
+```
+
+**Supabase** — get keys from your project → Settings → API, and the DATABASE_URL
+from Settings → Database → Connection string (Transaction mode, port 6543):
+```
+NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
+SUPABASE_SERVICE_ROLE_KEY=eyJ...
+DATABASE_URL=postgresql://postgres.xxxx:[password]@aws-0-region.pooler.supabase.com:6543/postgres?sslmode=require
+```
+
+**Anthropic** — from [console.anthropic.com](https://console.anthropic.com) → API Keys:
+```
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+### Step 3 — push schema to Supabase and set up user sync
+
+```bash
+# Push tables to Supabase (first time only)
+npm run db:push
+
+# Start the app
+npm run dev
+```
+
+Sign up at `/sign-up`. Your Clerk account is created but the `users` table row is not —
+because the webhook is not wired yet. Two options:
+
+**Option A — quick fix (manual insert):**
+Go to Supabase dashboard → SQL Editor and run:
+```sql
+INSERT INTO users (id, clerk_id, email, name)
+VALUES (gen_random_uuid(), 'user_YOUR_CLERK_ID', 'your@email.com', 'Your Name');
+```
+Get your Clerk user ID from Clerk dashboard → Users.
+
+**Option B — proper fix (webhook):**
+```bash
+brew install ngrok   # if not installed
+ngrok http 3000      # in a separate terminal while npm run dev is running
+```
+Copy the `https://xxxx.ngrok-free.app` URL, then in Clerk dashboard → Webhooks → Add endpoint:
+- URL: `https://xxxx.ngrok-free.app/api/webhooks/clerk`
+- Events: `user.created`, `user.updated`, `user.deleted`
+- Copy the Signing Secret into `.env.local` as `CLERK_WEBHOOK_SECRET`
+- Restart `npm run dev`
+
+### Quick reference — what each flag controls
+
+| What you change | Effect |
+|----------------|--------|
+| Remove `MOCK_AUTH=true` | Login screen appears, Clerk handles auth |
+| Replace `ANTHROPIC_API_KEY=sk-mock` | Real Claude API called on import and briefing |
+| Replace `DATABASE_URL` (local → Supabase) | Data persists in the cloud, not local Docker |
+| Add `CLERK_WEBHOOK_SECRET` | Sign-up automatically creates user row in DB |
+
+You can switch services one at a time — for example keep local Postgres while testing
+real Anthropic, or keep mock auth while testing against Supabase. Each flag is independent.
 
 ---
 
