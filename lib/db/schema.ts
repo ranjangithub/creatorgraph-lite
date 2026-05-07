@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid, integer, boolean, jsonb, pgEnum } from 'drizzle-orm/pg-core'
+import { pgTable, text, timestamp, uuid, integer, boolean, jsonb, pgEnum, unique } from 'drizzle-orm/pg-core'
 
 // ── Enums ──────────────────────────────────────────────────────────────────
 
@@ -128,4 +128,64 @@ export const competitors = pgTable('competitors', {
   handle:   text('handle').notNull(),
   notes:    text('notes'),
   addedAt:  timestamp('added_at').defaultNow().notNull(),
+})
+
+// ── Knowledge Graph ────────────────────────────────────────────────────────
+// The structured memory layer — nodes extracted from content, typed by role.
+// Creator --CREATED--> ContentItem --COVERS--> Topic
+//                                 --USES-----> Hook
+//                                 --GENERATED-> AudienceQuestion
+// AudienceSegment --ASKED--> AudienceQuestion
+// Hook --PERFORMS_WELL_WITH--> AudienceSegment
+
+// Node: Topic / Theme
+// Specific and higher-order concepts the creator covers.
+// parentId links sub-topics to their parent (e.g. "platform engineering" → "software engineering").
+// hasGap = true means audience asks about this but creator hasn't addressed it.
+
+export const topics = pgTable('topics', {
+  id:         uuid('id').primaryKey().defaultRandom(),
+  userId:     uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  name:       text('name').notNull(),
+  parentId:   uuid('parent_id'),                // higher-order topic
+  hasGap:     boolean('has_gap').default(false), // audience wants this, creator hasn't covered it
+  confidence: integer('confidence').default(80), // 0-100
+  createdAt:  timestamp('created_at').defaultNow().notNull(),
+}, t => ({ uniq: unique().on(t.userId, t.name) }))
+
+// Node: Hook / Analogy
+// Reusable creative assets extracted from content.
+// type: 'analogy' | 'framework' | 'opener' | 'statistic' | 'question'
+
+export const hooks = pgTable('hooks', {
+  id:         uuid('id').primaryKey().defaultRandom(),
+  userId:     uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  text:       text('text').notNull(),
+  hookType:   text('hook_type').notNull(),       // analogy | framework | opener | statistic | question
+  confidence: integer('confidence').default(80),
+  createdAt:  timestamp('created_at').defaultNow().notNull(),
+})
+
+// Node: AudienceSegment
+// Groups of people who engage with the creator's content.
+
+export const audienceSegments = pgTable('audience_segments', {
+  id:        uuid('id').primaryKey().defaultRandom(),
+  userId:    uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  name:      text('name').notNull(),             // "CTOs" | "founders" | "students"
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, t => ({ uniq: unique().on(t.userId, t.name) }))
+
+// Node: AudienceQuestion
+// Questions and objections extracted from comments or implied by content.
+// resolved = false means the creator has never directly answered this.
+
+export const audienceQuestions = pgTable('audience_questions', {
+  id:        uuid('id').primaryKey().defaultRandom(),
+  userId:    uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  question:  text('question').notNull(),
+  painPoint: text('pain_point'),                 // underlying frustration or need
+  segments:  jsonb('segments').$type<string[]>().default([]),  // which audience segments asked
+  resolved:  boolean('resolved').default(false), // has the creator addressed this?
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 })
