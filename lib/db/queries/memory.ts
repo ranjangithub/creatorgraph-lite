@@ -1,19 +1,18 @@
 import { db, memoryEntries } from '@/lib/db'
-import { eq, desc, count } from 'drizzle-orm'
+import { eq, desc } from 'drizzle-orm'
+import { getGraphEntityCount } from './graph'
 
-export async function getMemoryEntries(userId: string, limit = 50) {
+export async function getMemoryCount(userId: string) {
+  return getGraphEntityCount(userId)
+}
+
+// Legacy — kept for any existing data imported before the graph migration.
+export async function getLegacyMemoryEntries(userId: string, limit = 50) {
   return db.select()
     .from(memoryEntries)
     .where(eq(memoryEntries.userId, userId))
     .orderBy(desc(memoryEntries.createdAt))
     .limit(limit)
-}
-
-export async function getMemoryCount(userId: string) {
-  const [row] = await db.select({ count: count() })
-    .from(memoryEntries)
-    .where(eq(memoryEntries.userId, userId))
-  return row?.count ?? 0
 }
 
 export async function insertMemoryEntries(
