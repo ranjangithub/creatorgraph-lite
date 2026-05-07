@@ -1,4 +1,4 @@
-import { auth } from '@clerk/nextjs/server'
+import { getServerAuth } from '@/lib/auth'
 import { NextResponse } from 'next/server'
 import { db, users, briefings, ideas } from '@/lib/db'
 import { eq } from 'drizzle-orm'
@@ -6,7 +6,7 @@ import { buildCreatorContext } from '@/lib/anthropic/context/loader'
 import { generateBriefing } from '@/lib/anthropic/prompts/briefing'
 
 export async function POST() {
-  const { userId: clerkId } = await auth()
+  const { clerkId } = await getServerAuth()
   if (!clerkId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const [user] = await db.select().from(users).where(eq(users.clerkId, clerkId)).limit(1)

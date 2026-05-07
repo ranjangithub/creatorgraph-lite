@@ -19,6 +19,46 @@ Built as a tutorial app to demonstrate the Karpathy LLM Wiki pattern.
 
 ---
 
+## Local dev with mocks (no API keys needed)
+
+Run the full app locally with zero real accounts — Docker provides Postgres,
+a flag bypasses Clerk, and fixture data replaces Anthropic API calls.
+
+**Prerequisites:** Docker Desktop installed and running.
+
+```bash
+# 1. Start local Postgres
+docker compose up -d
+
+# 2. Use mock environment
+cp .env.local.mock .env.local
+
+# 3. Create tables
+npm run db:push
+
+# 4. Seed realistic demo data
+npm run db:seed-mock
+
+# 5. Start the app
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) — you land directly in the dashboard
+(no login), populated with a "platform engineering" creator's knowledge graph, 3 sample
+posts, and a pre-generated briefing with 2 content ideas ready to accept or reject.
+
+**What is mocked:**
+| Service | Mock behaviour |
+|---------|----------------|
+| Clerk (auth) | Hardcoded user `mock-user-001` — no login screen |
+| Postgres (DB) | Local Docker container — fully real queries |
+| Anthropic (AI) | Returns fixture responses — no API calls made |
+
+**Switching to real keys:** edit `.env.local`, replace the mock values with your real keys
+from Clerk, Supabase, and Anthropic, then restart `npm run dev`.
+
+---
+
 ## Local setup checklist
 
 ### 1. Clone and install

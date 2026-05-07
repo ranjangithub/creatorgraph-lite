@@ -1,8 +1,12 @@
 import Anthropic from '@anthropic-ai/sdk'
 
-// Single shared client — server-side only
+export const isMockMode = process.env.ANTHROPIC_API_KEY === 'sk-mock'
+
+// Single shared client — server-side only.
+// In mock mode the client is constructed but never called (each prompt
+// function checks isMockMode and returns fixtures before hitting the API).
 export const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!,
+  apiKey: isMockMode ? 'sk-ant-mock-placeholder' : process.env.ANTHROPIC_API_KEY!,
 })
 
 export const MODEL = 'claude-sonnet-4-6'

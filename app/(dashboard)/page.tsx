@@ -1,4 +1,4 @@
-import { auth } from '@clerk/nextjs/server'
+import { getServerAuth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { Header } from '@/components/layout/header'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -13,7 +13,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 
 export default async function OverviewPage() {
-  const { userId: clerkId } = await auth()
+  const { clerkId } = await getServerAuth()
   if (!clerkId) redirect('/sign-in')
 
   const user = await getUserByClerkId(clerkId)

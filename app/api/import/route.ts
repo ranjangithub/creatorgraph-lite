@@ -1,4 +1,4 @@
-import { auth } from '@clerk/nextjs/server'
+import { getServerAuth } from '@/lib/auth'
 import { NextResponse } from 'next/server'
 import { getUserByClerkId } from '@/lib/db/queries/users'
 import { insertContentItems } from '@/lib/db/queries/content'
@@ -13,7 +13,7 @@ import { parseLinkedInCSV, parseDocumentText } from '@/lib/linkedin/parser'
 import { extractGraphFromContent } from '@/lib/anthropic/prompts/graph-extraction'
 
 export async function POST(req: Request) {
-  const { userId: clerkId } = await auth()
+  const { clerkId } = await getServerAuth()
   if (!clerkId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const user = await getUserByClerkId(clerkId)

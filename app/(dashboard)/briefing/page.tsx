@@ -1,4 +1,4 @@
-import { auth } from '@clerk/nextjs/server'
+import { getServerAuth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { Header } from '@/components/layout/header'
 import { IdeaCard } from '@/components/briefing/idea-card'
@@ -12,7 +12,7 @@ import { GenerateBriefingButton } from '@/components/briefing/generate-button'
 import { Brain, Zap } from 'lucide-react'
 
 export default async function BriefingPage() {
-  const { userId: clerkId } = await auth()
+  const { clerkId } = await getServerAuth()
   if (!clerkId) redirect('/sign-in')
 
   const user = await getUserByClerkId(clerkId)

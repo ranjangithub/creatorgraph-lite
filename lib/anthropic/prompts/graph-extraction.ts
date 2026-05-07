@@ -1,4 +1,5 @@
-import { anthropic, MODEL, MAX_TOKENS } from '@/lib/anthropic/client'
+import { anthropic, MODEL, MAX_TOKENS, isMockMode } from '@/lib/anthropic/client'
+import { MOCK_GRAPH_EXTRACTION } from '@/lib/mock/fixtures'
 
 // ── Node types returned by graph extraction ────────────────────────────────
 
@@ -44,6 +45,8 @@ export async function extractGraphFromContent(
     comments?:   number
   }>
 ): Promise<GraphExtraction> {
+
+  if (isMockMode) return MOCK_GRAPH_EXTRACTION
 
   const contentBlock = contentBatch.map(c =>
     `[${c.index}] ${c.platform.toUpperCase()} | ${c.publishedAt ?? 'unknown date'}

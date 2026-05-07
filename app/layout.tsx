@@ -11,13 +11,15 @@ export const metadata: Metadata = {
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <ClerkProvider>
-      <html lang="en" suppressHydrationWarning>
-        <body className={inter.className}>
-          {children}
-        </body>
-      </html>
-    </ClerkProvider>
+  const isMock = process.env.MOCK_AUTH === 'true'
+
+  const body = (
+    <html lang="en" suppressHydrationWarning>
+      <body className={inter.className}>{children}</body>
+    </html>
   )
+
+  if (isMock) return body
+
+  return <ClerkProvider>{body}</ClerkProvider>
 }

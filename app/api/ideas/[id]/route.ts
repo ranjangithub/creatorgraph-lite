@@ -1,4 +1,4 @@
-import { auth } from '@clerk/nextjs/server'
+import { getServerAuth } from '@/lib/auth'
 import { NextResponse } from 'next/server'
 import { getUserByClerkId } from '@/lib/db/queries/users'
 import { updateIdeaStatus } from '@/lib/db/queries/ideas'
@@ -7,7 +7,7 @@ export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { userId: clerkId } = await auth()
+  const { clerkId } = await getServerAuth()
   if (!clerkId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const user = await getUserByClerkId(clerkId)

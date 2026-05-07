@@ -1,4 +1,5 @@
-import { anthropic, MODEL, MAX_TOKENS } from '@/lib/anthropic/client'
+import { anthropic, MODEL, MAX_TOKENS, isMockMode } from '@/lib/anthropic/client'
+import { MOCK_BRIEFING } from '@/lib/mock/fixtures'
 import type { CreatorContext } from '@/lib/anthropic/context/loader'
 
 export interface BriefingResult {
@@ -22,6 +23,8 @@ export interface IdeaSuggestion {
 // Produces 3-5 evidence-backed content ideas.
 
 export async function generateBriefing(ctx: CreatorContext): Promise<BriefingResult> {
+  if (isMockMode) return MOCK_BRIEFING
+
   const systemPrompt = `You are a content strategist with deep knowledge of this creator's entire history.
 You have access to their memory, past content, and competitor landscape.
 

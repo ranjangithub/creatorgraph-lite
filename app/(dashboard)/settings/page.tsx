@@ -1,4 +1,4 @@
-import { auth, currentUser } from '@clerk/nextjs/server'
+import { getServerAuth, getCurrentUser } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { Header } from '@/components/layout/header'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -6,14 +6,15 @@ import { getUserByClerkId } from '@/lib/db/queries/users'
 import { getContentCount } from '@/lib/db/queries/content'
 import { getMemoryCount } from '@/lib/db/queries/memory'
 import { UserButton } from '@clerk/nextjs'
+import { MOCK_AUTH } from '@/lib/auth'
 
 export default async function SettingsPage() {
-  const { userId: clerkId } = await auth()
+  const { clerkId } = await getServerAuth()
   if (!clerkId) redirect('/sign-in')
 
   const [user, clerkUser] = await Promise.all([
     getUserByClerkId(clerkId),
-    currentUser(),
+    getCurrentUser(),
   ])
   if (!user) redirect('/sign-in')
 
@@ -35,7 +36,7 @@ export default async function SettingsPage() {
             <CardDescription>Managed by Clerk — click the avatar to update</CardDescription>
           </CardHeader>
           <CardContent className="flex items-center gap-4">
-            <UserButton />
+            {!MOCK_AUTH && <UserButton />}
             <div>
               <p className="text-sm font-medium text-slate-900">{clerkUser?.fullName ?? 'Anonymous'}</p>
               <p className="text-sm text-slate-500">{clerkUser?.primaryEmailAddress?.emailAddress}</p>

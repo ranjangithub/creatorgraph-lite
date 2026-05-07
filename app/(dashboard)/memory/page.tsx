@@ -1,4 +1,4 @@
-import { auth } from '@clerk/nextjs/server'
+import { getServerAuth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { Header } from '@/components/layout/header'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -7,7 +7,7 @@ import { getTopics, getHooks, getOpenQuestions, getAudienceSegments } from '@/li
 import { Brain, Lightbulb, Users, HelpCircle } from 'lucide-react'
 
 export default async function MemoryPage() {
-  const { userId: clerkId } = await auth()
+  const { clerkId } = await getServerAuth()
   if (!clerkId) redirect('/sign-in')
 
   const user = await getUserByClerkId(clerkId)
