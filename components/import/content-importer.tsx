@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { Upload, CheckCircle, AlertCircle, Loader2, Link as LinkIcon } from 'lucide-react'
+import JSZip from 'jszip'
 
 type Source = 'linkedin' | 'medium' | 'substack' | 'github' | 'file'
 type Status = 'idle' | 'uploading' | 'processing' | 'done' | 'error'
@@ -94,13 +95,45 @@ export function ContentImporter() {
 
   async function handleFile(file: File) {
     const allowed = src.fileAccept?.split(',') ?? []
-    if (!allowed.some(ext => file.name.endsWith(ext.trim()))) {
+    if (!allowed.some(ext => file.name.toLowerCase().endsWith(ext.trim()))) {
       setStatus('error')
       setMessage(`Please upload a ${src.fileTypes} file.`)
       return
     }
+
     setStatus('uploading')
     setMessage('Reading file…')
+
+    // ZIP files are binary — unzip first, extract the LinkedIn CSV inside
+    if (file.name.toLowerCase().endsWith('.zip')) {
+      try {
+        const buf = await file.arrayBuffer()
+        const zip = await JSZip.loadAsync(buf)
+
+        // LinkedIn exports contain Shares.csv or Share_Info.csv
+        const csvEntry =
+          zip.file(/Shares\.csv$/i)[0] ??
+          zip.file(/Share_Info\.csv$/i)[0] ??
+          zip.file(/Posts\.csv$/i)[0] ??
+          zip.file(/\.csv$/i)[0]
+
+        if (!csvEntry) {
+          setStatus('error')
+          setMessage('No CSV file found in the ZIP. Make sure this is a LinkedIn data export (Settings → Data Privacy → Get a copy of your data).')
+          return
+        }
+
+        setMessage(`Found ${csvEntry.name} — processing…`)
+        const csvText = await csvEntry.async('text')
+        await submit({ content: csvText, fileName: csvEntry.name, source: active })
+      } catch {
+        setStatus('error')
+        setMessage('Could not read ZIP file. Make sure it is a valid LinkedIn export.')
+      }
+      return
+    }
+
+    // Plain text / CSV / MD
     const text = await file.text()
     await submit({ content: text, fileName: file.name, source: active })
   }
