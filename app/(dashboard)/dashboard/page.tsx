@@ -10,6 +10,7 @@ import { formatDate } from '@/lib/utils'
 import { Brain, FileText, Lightbulb, TrendingUp, Sparkles, AlertCircle, Users, Zap, ArrowRight, Upload } from 'lucide-react'
 import Link from 'next/link'
 import { Greeting } from '@/components/ui/greeting'
+import { AudienceSegmentsCard } from '@/components/knowledge-graph/audience-segments-card'
 
 const TOPIC_COLORS = [
   { color: '#4f46e5', bg: '#ede9fe', border: '#c4b5fd' },
@@ -262,22 +263,10 @@ export default async function DashboardPage() {
         )}
 
         {/* ── Audience segments ────────────────────────────────────────────── */}
-        {segmentList.length > 0 && (
-          <div style={{ background: '#fff', border: '1px solid #e0e7ff', borderRadius: 14, overflow: 'hidden' }}>
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0f4ff', background: '#fafbff', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Users size={14} color="#059669" />
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#0f0c29' }}>Who reads your content</span>
-              <span style={{ marginLeft: 'auto', fontSize: 11, color: '#94a3b8' }}>detected from your posts</span>
-            </div>
-            <div style={{ padding: '16px 20px', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              {segmentList.map(s => (
-                <span key={s.id} style={{ fontSize: 12, fontWeight: 600, padding: '5px 14px', borderRadius: 20, background: '#ecfdf5', color: '#059669', border: '1px solid #6ee7b7' }}>
-                  {s.name}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
+        <AudienceSegmentsCard
+          initialSegments={segmentList}
+          questions={questionList}
+        />
 
       </div>
     </>
