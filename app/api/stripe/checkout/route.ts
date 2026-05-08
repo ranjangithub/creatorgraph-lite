@@ -46,21 +46,38 @@ export async function POST(req: Request) {
       await upsertSubscription(user.id, { stripeCustomerId: customerId })
     }
 
-    const session = await stripe.checkout.sessions.create({
-      customer:              customerId,
-      mode:                  'subscription',
-      payment_method_types:  ['card'],
-      line_items: [{
-        price:    priceId,
-        quantity: 1,
-      }],
+    const earlyBirdCouponId = process.env.STRIPE_EARLY_BIRD_COUPON_ID
+
+    const baseParams = {
+      customer:             customerId,
+      mode:                 'subscription' as const,
+      payment_method_types: ['card'] as ['card'],
+      line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${APP_URL}/settings?upgraded=true`,
       cancel_url:  `${APP_URL}/pricing?canceled=true`,
-      subscription_data: {
-        metadata: { userId: user.id, tier },
-      },
-      allow_promotion_codes: true,
-    })
+      subscription_data: { metadata: { userId: user.id, tier } },
+    }
+
+    let session
+    if (earlyBirdCouponId && !earlyBirdCouponId.includes('placeholder')) {
+      try {
+        session = await stripe.checkout.sessions.create({
+          ...baseParams,
+          discounts: [{ coupon: earlyBirdCouponId }],
+        })
+      } catch {
+        // Coupon exhausted or invalid — fall back to no discount
+        session = await stripe.checkout.sessions.create({
+          ...baseParams,
+          allow_promotion_codes: true,
+        })
+      }
+    } else {
+      session = await stripe.checkout.sessions.create({
+        ...baseParams,
+        allow_promotion_codes: true,
+      })
+    }
 
     return NextResponse.json({ url: session.url })
   } catch (err) {

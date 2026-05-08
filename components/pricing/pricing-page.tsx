@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Check, Zap, Star, Building2 } from 'lucide-react'
-import { TIER_CONFIGS } from '@/lib/stripe/config'
+import { useState, useEffect } from 'react'
+import { useRouter }           from 'next/navigation'
+import { Check, Zap, Star, Building2, Timer } from 'lucide-react'
+import { TIER_CONFIGS }        from '@/lib/stripe/config'
 import type { SubscriptionTier } from '@/lib/stripe/config'
 
 const FEATURES: Record<SubscriptionTier, string[]> = {
@@ -54,16 +54,29 @@ const TIER_ICONS: Record<SubscriptionTier, React.ReactNode> = {
 
 const DISPLAY_TIERS: SubscriptionTier[] = ['free', 'creator', 'creator_pro']
 
-function formatPrice(cents: number, annual: boolean): string {
+interface EarlyBirdState {
+  active:    boolean
+  remaining: number
+  total:     number
+}
+
+function formatPrice(cents: number): string {
   if (cents === 0) return '$0'
-  const monthly = annual ? cents : cents
-  return `$${Math.round(monthly / 100)}`
+  return `$${Math.round(cents / 100)}`
 }
 
 export function PricingPageClient() {
   const [annual, setAnnual]       = useState(false)
   const [loading, setLoading]     = useState<SubscriptionTier | null>(null)
+  const [earlyBird, setEarlyBird] = useState<EarlyBirdState | null>(null)
   const router                    = useRouter()
+
+  useEffect(() => {
+    fetch('/api/early-bird')
+      .then(r => r.json())
+      .then(setEarlyBird)
+      .catch(() => setEarlyBird({ active: false, remaining: 100, total: 100 }))
+  }, [])
 
   async function handleUpgrade(tier: SubscriptionTier) {
     if (tier === 'free') return
@@ -76,7 +89,6 @@ export function PricingPageClient() {
       })
       const data = await res.json()
       if (!res.ok) {
-        // Not signed in — redirect to sign-in
         if (res.status === 401) { router.push('/sign-in'); return }
         throw new Error(data.error)
       }
@@ -88,8 +100,42 @@ export function PricingPageClient() {
     }
   }
 
+  const spotsTaken   = earlyBird ? earlyBird.total - earlyBird.remaining : 0
+  const pctTaken     = earlyBird ? Math.round((spotsTaken / earlyBird.total) * 100) : 0
+  const isEarlyBird  = earlyBird?.active ?? false
+
   return (
     <div style={{ minHeight: '100vh', background: '#fafbff', fontFamily: 'system-ui, sans-serif' }}>
+
+      {/* Early Bird Banner */}
+      {isEarlyBird && (
+        <div style={{
+          background: 'linear-gradient(90deg, #f97316 0%, #ea580c 100%)',
+          padding: '12px 24px',
+          textAlign: 'center',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <Timer style={{ width: 16, height: 16, color: '#fff' }} />
+            <span style={{ color: '#fff', fontWeight: 800, fontSize: 14 }}>
+              Early Bird Offer — 50% off your first month
+            </span>
+            <span style={{ background: 'rgba(255,255,255,0.25)', color: '#fff', fontSize: 12, fontWeight: 700, padding: '2px 10px', borderRadius: 999 }}>
+              {earlyBird!.remaining} of {earlyBird!.total} spots left
+            </span>
+          </div>
+          {/* Progress bar */}
+          <div style={{ maxWidth: 280, margin: '8px auto 0', background: 'rgba(255,255,255,0.3)', borderRadius: 999, height: 4 }}>
+            <div style={{
+              width: `${pctTaken}%`, height: '100%',
+              background: '#fff', borderRadius: 999,
+              transition: 'width 0.5s ease',
+            }} />
+          </div>
+          <div style={{ color: 'rgba(255,255,255,0.85)', fontSize: 11, marginTop: 4 }}>
+            {spotsTaken} of {earlyBird!.total} spots claimed — applied automatically at checkout
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <div style={{ textAlign: 'center', padding: '72px 24px 40px' }}>
@@ -139,6 +185,8 @@ export function PricingPageClient() {
           const price   = annual ? tier.annualPrice : tier.monthlyPrice
           const popular = tier.highlight
 
+          const discountedPrice = isEarlyBird && price > 0 ? Math.round(price / 2) : null
+
           return (
             <div key={tierId} style={{
               flex: '1 1 300px', maxWidth: 340,
@@ -150,13 +198,23 @@ export function PricingPageClient() {
               boxShadow:    popular ? '0 8px 32px rgba(79,70,229,0.12)' : '0 2px 8px rgba(0,0,0,0.04)',
             }}>
 
-              {popular && (
+              {popular && !isEarlyBird && (
                 <div style={{
                   position: 'absolute', top: -14, left: '50%', transform: 'translateX(-50%)',
                   background: '#4f46e5', color: '#fff', fontSize: 12, fontWeight: 700,
                   padding: '4px 16px', borderRadius: 999, whiteSpace: 'nowrap',
                 }}>
                   Most popular
+                </div>
+              )}
+
+              {isEarlyBird && price > 0 && (
+                <div style={{
+                  position: 'absolute', top: -14, left: '50%', transform: 'translateX(-50%)',
+                  background: 'linear-gradient(90deg, #f97316, #ea580c)', color: '#fff',
+                  fontSize: 12, fontWeight: 700, padding: '4px 16px', borderRadius: 999, whiteSpace: 'nowrap',
+                }}>
+                  50% off — Early Bird
                 </div>
               )}
 
@@ -170,18 +228,41 @@ export function PricingPageClient() {
               </p>
 
               <div style={{ marginBottom: 24 }}>
-                <span style={{ fontSize: 40, fontWeight: 900, color: '#0f0c29' }}>
-                  {formatPrice(price, annual)}
-                </span>
-                {price > 0 && (
-                  <span style={{ fontSize: 14, color: '#94a3b8', marginLeft: 4 }}>
-                    /mo{annual ? ', billed annually' : ''}
-                  </span>
-                )}
-                {annual && price > 0 && (
-                  <div style={{ fontSize: 12, color: '#16a34a', fontWeight: 600, marginTop: 4 }}>
-                    ${Math.round(price * 12 / 100)}/year — save ${Math.round((tier.monthlyPrice - price) * 12 / 100)}
-                  </div>
+                {discountedPrice !== null ? (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                      <span style={{ fontSize: 40, fontWeight: 900, color: '#0f0c29' }}>
+                        {formatPrice(discountedPrice)}
+                      </span>
+                      <span style={{ fontSize: 14, color: '#94a3b8' }}>
+                        /mo{annual ? ', billed annually' : ''}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                      <span style={{ fontSize: 14, color: '#94a3b8', textDecoration: 'line-through' }}>
+                        {formatPrice(price)}/mo
+                      </span>
+                      <span style={{ fontSize: 12, color: '#f97316', fontWeight: 700, background: '#fff7ed', padding: '2px 8px', borderRadius: 999 }}>
+                        First month 50% off
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <span style={{ fontSize: 40, fontWeight: 900, color: '#0f0c29' }}>
+                      {formatPrice(price)}
+                    </span>
+                    {price > 0 && (
+                      <span style={{ fontSize: 14, color: '#94a3b8', marginLeft: 4 }}>
+                        /mo{annual ? ', billed annually' : ''}
+                      </span>
+                    )}
+                    {annual && price > 0 && (
+                      <div style={{ fontSize: 12, color: '#16a34a', fontWeight: 600, marginTop: 4 }}>
+                        ${Math.round(price * 12 / 100)}/year — save ${Math.round((tier.monthlyPrice - price) * 12 / 100)}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -191,15 +272,18 @@ export function PricingPageClient() {
                 style={{
                   width: '100%', padding: '12px 0', borderRadius: 10, border: 'none',
                   cursor: loading === tierId ? 'not-allowed' : 'pointer',
-                  background: popular ? '#4f46e5' : tierId === 'free' ? '#f0f4ff' : '#0f0c29',
-                  color: popular ? '#fff' : tierId === 'free' ? '#4f46e5' : '#fff',
+                  background: isEarlyBird && tierId !== 'free'
+                    ? 'linear-gradient(90deg, #f97316, #ea580c)'
+                    : popular ? '#4f46e5' : tierId === 'free' ? '#f0f4ff' : '#0f0c29',
+                  color: tierId === 'free' ? '#4f46e5' : '#fff',
                   fontWeight: 700, fontSize: 15, marginBottom: 24,
                   opacity: loading === tierId ? 0.7 : 1,
                   transition: 'opacity 0.15s',
                 }}
               >
                 {loading === tierId ? 'Redirecting...' :
-                  tierId === 'free' ? 'Start free' : `Get ${tier.name}`}
+                  tierId === 'free' ? 'Start free' :
+                  isEarlyBird ? `Claim 50% off — ${tier.name}` : `Get ${tier.name}`}
               </button>
 
               <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
