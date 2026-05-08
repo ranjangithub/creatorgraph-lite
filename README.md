@@ -1,20 +1,50 @@
-# CreatorGraph Lite
+# CreatorGraph Beta
 
-Context-engineering-powered content memory for LinkedIn professionals.
-Built as a tutorial app to demonstrate the Karpathy LLM Wiki pattern.
+Multi-platform content intelligence for creators and brands.
+Import your content history, extract your knowledge graph, generate platform-aware drafts using your own saved voice templates.
+
+Built on the Karpathy LLM Wiki pattern — structured memory, not RAG.
+
+---
 
 ## What it does
 
-1. Import your LinkedIn post history (CSV export)
-2. Claude extracts structured memories: expertise, voice patterns, audience questions
-3. Generate a daily briefing — 3-5 content ideas grounded in your actual history
+1. **Import** content from LinkedIn (ZIP or CSV), Medium, Substack, YouTube, GitHub, or local files
+2. **Extract** a knowledge graph — topics you own, hooks you use, audience questions, voice patterns
+3. **Brief** — daily AI-generated content ideas ranked by freshness, audience fit, and hook performance
+4. **Draft** — generate ready-to-post content using saved voice templates from your Prompt Vault
+5. **Track** — log post performance per platform; hook batting averages updated nightly
+
+---
+
+## Platform support
+
+| Platform | Import | Content types | Notes |
+|----------|--------|---------------|-------|
+| LinkedIn | ZIP export, CSV, article URL | Posts, articles, carousels | Basic export (HTML) and Full export (CSV) both supported |
+| YouTube | URL, transcript paste | Videos, Shorts | Transcript extraction |
+| Instagram | Caption paste, CSV | Reels, Carousels, Posts | API too locked down; manual import |
+| Medium | Article URL | Articles | URL scraping |
+| Substack | Post URL | Newsletters | URL scraping |
+| GitHub | Profile URL | READMEs, notes | URL scraping |
+| Local file | Upload | MD, TXT, CSV | Any plain text content |
+
+---
+
+## Account types
+
+**Individual creator** — personal brand, first-person voice, LinkedIn/YouTube/Instagram profiles.
+
+**Enterprise** — company brand, team members (admin/editor/viewer), brand voice guidelines, content pillars, company pages and brand channels.
+
+---
 
 ## Stack
 
 - **Framework:** Next.js 15 App Router
 - **Auth:** Clerk
 - **Database:** Supabase (Postgres) + Drizzle ORM
-- **AI:** Anthropic Claude (claude-3-5-haiku)
+- **AI:** Anthropic Claude (`claude-sonnet-4-6`)
 - **UI:** Tailwind + shadcn/ui
 
 ---
@@ -44,13 +74,13 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) — you land directly in the dashboard
-(no login), populated with a "platform engineering" creator's knowledge graph, 3 sample
-posts, and a pre-generated briefing with 2 content ideas ready to accept or reject.
+(no login), populated with a sample creator's knowledge graph and a pre-generated briefing.
 
 **What is mocked:**
+
 | Service | Mock behaviour |
 |---------|----------------|
-| Clerk (auth) | Hardcoded user `mock-user-001` — no login screen |
+| Clerk (auth) | Hardcoded user — no login screen |
 | Postgres (DB) | Local Docker container — fully real queries |
 | Anthropic (AI) | Returns fixture responses — no API calls made |
 
@@ -58,30 +88,22 @@ posts, and a pre-generated briefing with 2 content ideas ready to accept or reje
 
 ## Switching from mock to real services
 
-When you are ready to connect real accounts, do these three steps in order.
-
-### Step 1 — remove the mock flags from `.env.local`
-
-Open `.env.local` and make two changes:
+### Step 1 — update `.env.local`
 
 ```bash
-# Remove or comment out this line
-MOCK_AUTH=true
-
-# Replace this with your real key
+MOCK_AUTH=false
 ANTHROPIC_API_KEY=sk-ant-YOUR_REAL_KEY
 ```
 
-### Step 2 — replace each service's placeholder values
+### Step 2 — add real service keys
 
-**Clerk** — get keys from [dashboard.clerk.com](https://dashboard.clerk.com) → API Keys:
+**Clerk** — from [dashboard.clerk.com](https://dashboard.clerk.com) → API Keys:
 ```
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...   ← replace mock_placeholder
-CLERK_SECRET_KEY=sk_test_...                     ← replace mock_placeholder
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+CLERK_SECRET_KEY=sk_test_...
 ```
 
-**Supabase** — get keys from your project → Settings → API, and the DATABASE_URL
-from Settings → Database → Connection string (Transaction mode, port 6543):
+**Supabase** — from your project → Settings → API and Settings → Database:
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
@@ -89,54 +111,19 @@ SUPABASE_SERVICE_ROLE_KEY=eyJ...
 DATABASE_URL=postgresql://postgres.xxxx:[password]@aws-0-region.pooler.supabase.com:6543/postgres?sslmode=require
 ```
 
-**Anthropic** — from [console.anthropic.com](https://console.anthropic.com) → API Keys:
+**Cron secret** — any random string, used to secure the nightly job endpoint:
 ```
-ANTHROPIC_API_KEY=sk-ant-...
+CRON_SECRET=your_secret_here
 ```
 
-### Step 3 — push schema to Supabase and set up user sync
+### Step 3 — push schema and start
 
 ```bash
-# Push tables to Supabase (first time only)
 npm run db:push
-
-# Start the app
 npm run dev
 ```
 
-Sign up at `/sign-up`. Your Clerk account is created but the `users` table row is not —
-because the webhook is not wired yet. Two options:
-
-**Option A — quick fix (manual insert):**
-Go to Supabase dashboard → SQL Editor and run:
-```sql
-INSERT INTO users (id, clerk_id, email, name)
-VALUES (gen_random_uuid(), 'user_YOUR_CLERK_ID', 'your@email.com', 'Your Name');
-```
-Get your Clerk user ID from Clerk dashboard → Users.
-
-**Option B — proper fix (webhook):**
-```bash
-brew install ngrok   # if not installed
-ngrok http 3000      # in a separate terminal while npm run dev is running
-```
-Copy the `https://xxxx.ngrok-free.app` URL, then in Clerk dashboard → Webhooks → Add endpoint:
-- URL: `https://xxxx.ngrok-free.app/api/webhooks/clerk`
-- Events: `user.created`, `user.updated`, `user.deleted`
-- Copy the Signing Secret into `.env.local` as `CLERK_WEBHOOK_SECRET`
-- Restart `npm run dev`
-
-### Quick reference — what each flag controls
-
-| What you change | Effect |
-|----------------|--------|
-| Remove `MOCK_AUTH=true` | Login screen appears, Clerk handles auth |
-| Replace `ANTHROPIC_API_KEY=sk-mock` | Real Claude API called on import and briefing |
-| Replace `DATABASE_URL` (local → Supabase) | Data persists in the cloud, not local Docker |
-| Add `CLERK_WEBHOOK_SECRET` | Sign-up automatically creates user row in DB |
-
-You can switch services one at a time — for example keep local Postgres while testing
-real Anthropic, or keep mock auth while testing against Supabase. Each flag is independent.
+Users are created lazily on first authenticated request — no webhook required. Sign up via Clerk, the app creates your DB row automatically on first page load.
 
 ---
 
@@ -152,41 +139,39 @@ npm install --legacy-peer-deps
 
 ### 2. Create `.env.local`
 
-Copy the example file:
-
 ```bash
-cp .env.local.example .env.local
+cp .env.local.mock .env.local
 ```
 
-Then fill in each section below.
+Edit the file — see sections below for each service.
 
 ---
 
 ### 3. Clerk (Auth)
 
 1. Go to [dashboard.clerk.com](https://dashboard.clerk.com)
-2. Create a new application (choose "Email + Google" for sign-in options)
-3. Go to **API Keys** tab
-4. Copy into `.env.local`:
+2. Create a new application
+3. Go to **API Keys** and copy:
 
 ```
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
 CLERK_SECRET_KEY=sk_test_...
 ```
 
-For `CLERK_WEBHOOK_SECRET` — skip for local dev. The webhook syncs Clerk users to
-your database; without it, sign-up works but the user row won't be created automatically.
-**Workaround:** after signing up, the app will redirect to `/briefing` but show "User not found".
-Set up the webhook (step 6 below) to fix this properly.
+Set the redirect URLs:
+```
+NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
+NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/dashboard
+```
 
 ---
 
 ### 4. Supabase (Database)
 
 1. Go to [supabase.com](https://supabase.com) → New project
-2. Wait for it to provision (~1 min)
-3. Go to **Settings → API**
-4. Copy into `.env.local`:
+2. Go to **Settings → API** and copy:
 
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
@@ -194,22 +179,18 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 SUPABASE_SERVICE_ROLE_KEY=eyJ...
 ```
 
-5. Go to **Settings → Database → Connection string**
-   - Select **Transaction mode** (port 6543, NOT 5432)
-   - Copy the connection string, replace `[YOUR-PASSWORD]` with your project password
-   - Add `?sslmode=require` at the end
+3. Go to **Settings → Database → Connection string** → Transaction mode (port 6543):
 
 ```
-DATABASE_URL=postgresql://postgres.xxxx:[password]@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=require
+DATABASE_URL=postgresql://postgres.xxxx:[password]@aws-0-region.pooler.supabase.com:6543/postgres?sslmode=require
 ```
 
 ---
 
 ### 5. Anthropic
 
-1. Go to [console.anthropic.com](https://console.anthropic.com)
-2. **API Keys** → Create key
-3. Copy into `.env.local`:
+1. Go to [console.anthropic.com](https://console.anthropic.com) → API Keys
+2. Copy into `.env.local`:
 
 ```
 ANTHROPIC_API_KEY=sk-ant-...
@@ -219,56 +200,15 @@ ANTHROPIC_API_KEY=sk-ant-...
 
 ### 6. Push database schema
 
-Run this once (creates all tables in Supabase):
-
 ```bash
 npm run db:push
 ```
 
-If it asks to confirm table creation, type `y`.
+Creates all tables in Supabase. Run again after any schema changes.
 
 ---
 
-### 7. Clerk webhook (optional but recommended)
-
-Without this, signing up creates a Clerk account but NOT a row in your `users` table.
-The app will break after sign-up. Two options:
-
-**Option A — use ngrok to expose localhost:**
-
-```bash
-# Install ngrok if you don't have it
-brew install ngrok
-
-# In one terminal, start the app
-npm run dev
-
-# In another terminal, expose it
-ngrok http 3000
-```
-
-Copy the `https://xxxx.ngrok-free.app` URL.
-
-In Clerk dashboard → **Webhooks** → Add endpoint:
-- URL: `https://xxxx.ngrok-free.app/api/webhooks/clerk`
-- Events: `user.created`, `user.updated`, `user.deleted`
-- Copy the **Signing Secret** (`whsec_...`) into `.env.local` as `CLERK_WEBHOOK_SECRET`
-- Restart `npm run dev`
-
-**Option B — seed your user manually:**
-
-After signing up via Clerk, run this in Supabase SQL editor to insert your user row:
-
-```sql
-INSERT INTO users (id, clerk_id, email, name)
-VALUES (gen_random_uuid(), 'user_YOUR_CLERK_USER_ID', 'your@email.com', 'Your Name');
-```
-
-Get your Clerk user ID from Clerk dashboard → Users.
-
----
-
-### 8. Start the app
+### 7. Start the app
 
 ```bash
 npm run dev
@@ -278,61 +218,143 @@ Open [http://localhost:3000](http://localhost:3000)
 
 ---
 
+## How LinkedIn import works
+
+LinkedIn offers two export types — both are supported:
+
+**Basic export** (faster, ~1 min):
+- Settings → Data Privacy → Get a copy of your data → select basic fields → Request
+- Download the ZIP — articles are stored as individual HTML files
+- Upload the ZIP directly — the app extracts and parses all articles automatically
+
+**Full export** (slower, up to 24 hours):
+- Settings → Data Privacy → Get a copy of your data → select Posts & Articles → Request
+- Download the ZIP — contains `Shares.csv` or `Share_Info.csv`
+- Upload the ZIP or the CSV directly
+
+Both formats are detected automatically. You do not need to unzip manually.
+
+---
+
+## Prompt Vault
+
+Settings → Prompt Vault stores reusable voice + format templates per platform.
+
+Each template defines:
+- **Platform** and **content type** (LinkedIn post, Instagram carousel, YouTube video, etc.)
+- **Brand voice / persona** — who is speaking and from what perspective
+- **Tone instructions** — style, register, what to avoid
+- **Format instructions** — structure, length, and layout rules
+- **Hashtags** — automatically appended to every draft using this template
+
+Four sample templates are pre-loaded on first visit. Edit them to match your voice, add new ones for each platform you post on.
+
+When you accept a briefing idea → **Write with AI** → pick platform + template → AI generates a ready-to-post draft using your saved voice. Edit inline, copy to clipboard, open the platform, paste, and post.
+
+---
+
+## Nightly batch jobs
+
+A cron job runs at 2am UTC (`/api/cron/nightly`) doing three things:
+
+1. **Idea enrichment** — classifies hook types (question, statistic, story, contrarian, list, bold claim) and computes freshness scores for recent ideas
+2. **Hook performance** — aggregates post engagement by hook type per user per platform, updates batting averages
+3. **Niche benchmarks** — aggregates topics from opted-in creators by niche and platform, powers the "first-mover opportunity" signals
+
+Run locally with:
+```bash
+npm run cron:nightly
+```
+
+Vercel Cron is configured in `vercel.json` for production.
+
+---
+
 ## Useful commands
 
 ```bash
-npm run dev          # start dev server
-npm run db:push      # sync schema to Supabase (run after schema changes)
-npm run db:studio    # visual DB browser (Drizzle Studio)
-npm run build        # production build
+npm run dev           # start dev server
+npm run db:push       # sync schema changes to Supabase
+npm run db:studio     # visual DB browser (Drizzle Studio)
+npm run db:seed-mock  # seed demo data for local dev
+npm run cron:nightly  # run nightly batch jobs against local dev server
+npm run build         # production build
 ```
+
+---
 
 ## Project structure
 
 ```
 app/
-  (auth)/            # Clerk sign-in / sign-up pages
-  (dashboard)/       # Protected: overview, briefing, import, memory, settings
-  api/               # API routes (briefing, import, ideas, clerk webhook)
-  page.tsx           # Public landing page
+  (auth)/              # Clerk sign-in / sign-up pages
+  (dashboard)/
+    dashboard/         # Intelligent overview — content DNA, hook leaderboard
+    briefing/          # Daily ideas — accept, draft, post, log performance
+    import/            # Multi-platform content import
+    memory/            # Knowledge graph viewer
+    settings/          # Account, Prompt Vault, niche benchmarking, hook stats
+  api/
+    briefing/          # Generate daily briefing
+    import/            # Parse and ingest content (CSV, ZIP, URL, HTML batch)
+    generate/          # AI draft generation using vault templates
+    prompts/           # Prompt Vault CRUD
+    ideas/[id]/        # Accept / reject / mark-posted
+    cron/nightly/      # Batch jobs (hook perf, niche benchmarks, idea enrichment)
+    settings/niche/    # Niche + benchmark opt-in settings
+  page.tsx             # Public landing page (redirects to /dashboard if logged in)
+
 components/
-  ui/                # shadcn/ui primitives
-  layout/            # Sidebar, Header
-  briefing/          # IdeaCard, GenerateBriefingButton
-  import/            # LinkedInUploader
+  ui/                  # shadcn/ui primitives
+  layout/              # Sidebar, Header
+  briefing/            # IdeaCard (with generate panel), GenerateBriefingButton
+  import/              # ContentImporter (ZIP/CSV/URL/paste per platform)
+  settings/            # PromptVault, NicheSettings
+  onboarding/          # Wizard, MockSignin
+
 lib/
   db/
-    schema.ts        # Drizzle schema (source of truth for all tables)
-    queries/         # One file per table — all DB access lives here
+    schema.ts          # Drizzle schema — source of truth for all tables
+    queries/           # One file per domain (analytics, content, ideas, prompts, …)
+  accounts/
+    types.ts           # AccountType, VoiceProfile, AccountStrategy interfaces
+    individual.ts      # First-person voice strategy
+    enterprise.ts      # Brand voice strategy
+    factory.ts         # getAccountStrategy(user) → correct strategy
+  platforms/
+    types.ts           # Platform, ContentType, PlatformAdapter interfaces
+    registry.ts        # getPlatformAdapter(platform) → adapter
+    adapters/          # linkedin.ts, youtube.ts, instagram.ts
+  briefing/
+    generator.ts       # buildBriefingPrompt — wires account + platform + template
   anthropic/
-    context/loader.ts       # Context Engineering: builds the memory block
-    prompts/briefing.ts     # Daily briefing generation
-    prompts/memory-extraction.ts  # Extract memories from content batch
-  linkedin/parser.ts  # Parse LinkedIn CSV export + plain text files
+    client.ts          # Shared Anthropic client + model config
+    prompts/           # briefing.ts, graph-extraction.ts
+  linkedin/
+    parser.ts          # Parse LinkedIn CSV export + plain text docs
+  auth.ts              # getOrCreateDbUser — lazy user creation on first request
 ```
 
-## How LinkedIn import works
+---
 
-1. On LinkedIn: Settings → Data Privacy → Get a copy of your data → Posts → Request archive
-2. LinkedIn emails a ZIP within ~10 minutes
-3. Open the ZIP, find `Share_Info.csv` or `Posts.csv`
-4. Upload it on the Import page
-5. Claude reads each post, extracts memories, stores them in `memory_entries`
-6. Go to Briefing → Generate — Claude loads your memories and suggests today's ideas
+## Architecture: Context Engineering
 
-## Context Engineering (the core idea)
-
-Rather than sending all your raw posts to Claude on every request (RAG / retrieval),
-this app pre-compiles your content into structured memory entries (Karpathy's LLM Wiki pattern):
+Rather than RAG (retrieving raw posts at query time), this app pre-compiles content into a structured knowledge graph:
 
 ```
-Raw posts → Claude extracts → memory_entries table
-                                     ↓
-                         Briefing request loads top 50 memories
-                                     ↓
-                         Structured context block injected into prompt
-                                     ↓
-                         Claude generates ideas grounded in YOUR history
+Import content
+    ↓
+Claude extracts → topics, hooks, audience questions, voice patterns
+    ↓
+Stored in graph tables (topics, hooks, audience_segments, audience_questions)
+    ↓
+Briefing request loads the graph (top 50 entries, right slice for the context window)
+    ↓
+Structured context block injected into prompt
+    ↓
+Claude generates ideas grounded in YOUR actual history
 ```
 
 Context window = RAM. Load exactly the right slice, not everything.
+Each memory is a typed node, not a raw text chunk. The graph tells Claude
+what topics you own, what your audience asks, which hooks you overuse — not just what you wrote.
