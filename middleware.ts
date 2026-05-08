@@ -1,21 +1,24 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+import type { NextRequest, NextFetchEvent } from 'next/server'
 
 const isPublicRoute = createRouteMatcher([
   '/',
+  '/pricing',
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/api/webhooks(.*)',
+  '/api/stripe/webhook',
 ])
 
-export default async function middleware(req: NextRequest, event: unknown) {
+const clerk = clerkMiddleware(async (auth, r) => {
+  if (!isPublicRoute(r)) await auth.protect()
+})
+
+export default function middleware(req: NextRequest, event: NextFetchEvent) {
   // In mock mode every route is accessible — auth is handled by getServerAuth()
   if (process.env.MOCK_AUTH === 'true') return NextResponse.next()
-
-  return clerkMiddleware(async (auth, r) => {
-    if (!isPublicRoute(r)) await auth.protect()
-  })(req, event as Parameters<ReturnType<typeof clerkMiddleware>>[1])
+  return clerk(req, event)
 }
 
 export const config = {

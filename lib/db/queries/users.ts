@@ -1,6 +1,7 @@
 import { db, users } from '@/lib/db'
 import { eq, sql } from 'drizzle-orm'
 import type { LLMProvider } from '@/lib/ai/types'
+import type { SubscriptionTier } from '@/lib/stripe/config'
 
 export async function getUserByClerkId(clerkId: string) {
   const [user] = await db.select().from(users).where(eq(users.clerkId, clerkId)).limit(1)
@@ -77,4 +78,73 @@ export async function resetUsageIfNewMonth(userId: string): Promise<void> {
       .set({ monthlyUsage: 0, usageResetAt: now, updatedAt: now })
       .where(eq(users.id, userId))
   }
+}
+
+// ── Subscription queries ───────────────────────────────────────────────────
+
+export async function getSubscription(userId: string) {
+  const [user] = await db
+    .select({
+      stripeCustomerId:     users.stripeCustomerId,
+      stripeSubscriptionId: users.stripeSubscriptionId,
+      stripePriceId:        users.stripePriceId,
+      subscriptionStatus:   users.subscriptionStatus,
+      subscriptionTier:     users.subscriptionTier,
+      currentPeriodEnd:     users.currentPeriodEnd,
+    })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1)
+  return user ?? null
+}
+
+export async function getSubscriptionByStripeCustomerId(stripeCustomerId: string) {
+  const [user] = await db
+    .select()
+    .from(users)
+    .where(eq(users.stripeCustomerId, stripeCustomerId))
+    .limit(1)
+  return user ?? null
+}
+
+export async function upsertSubscription(
+  userId: string,
+  data: {
+    stripeCustomerId?:     string
+    stripeSubscriptionId?: string
+    stripePriceId?:        string
+    subscriptionStatus?:   string
+    subscriptionTier?:     SubscriptionTier
+    currentPeriodEnd?:     Date | null
+  }
+) {
+  await db
+    .update(users)
+    .set({ ...data, updatedAt: new Date() })
+    .where(eq(users.id, userId))
+}
+
+export async function upsertSubscriptionByStripeCustomerId(
+  stripeCustomerId: string,
+  data: {
+    stripeSubscriptionId?: string
+    stripePriceId?:        string
+    subscriptionStatus?:   string
+    subscriptionTier?:     SubscriptionTier
+    currentPeriodEnd?:     Date | null
+  }
+) {
+  await db
+    .update(users)
+    .set({ ...data, updatedAt: new Date() })
+    .where(eq(users.stripeCustomerId, stripeCustomerId))
+}
+
+export async function getUserIdByStripeCustomerId(stripeCustomerId: string): Promise<string | null> {
+  const [user] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.stripeCustomerId, stripeCustomerId))
+    .limit(1)
+  return user?.id ?? null
 }

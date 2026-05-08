@@ -120,6 +120,8 @@ function GeneratePanel({ idea, onMarkPosted }: { idea: IdeaCardProps['idea']; on
   const [hashtags, setHashtags]       = useState<string[]>([])
   const [copied, setCopied]           = useState(false)
   const [showEng, setShowEng]         = useState(false)
+  const [limitReached, setLimitReached] = useState(false)
+  const [generateError, setGenerateError] = useState('')
 
   useEffect(() => {
     fetch('/api/prompts').then(r => r.json()).then(d => {
@@ -136,19 +138,32 @@ function GeneratePanel({ idea, onMarkPosted }: { idea: IdeaCardProps['idea']; on
   async function generate() {
     setGenerating(true)
     setDraft('')
-    const res  = await fetch('/api/generate', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ideaId:      idea.id,
-        templateId:  templateId || undefined,
-        platform,
-        contentType: selectedTemplate?.contentType ?? 'post',
-      }),
-    })
-    const json = await res.json()
-    setDraft(json.draft ?? '')
-    setHashtags(json.hashtags ?? [])
-    setGenerating(false)
+    setLimitReached(false)
+    setGenerateError('')
+    try {
+      const res  = await fetch('/api/generate', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ideaId:      idea.id,
+          templateId:  templateId || undefined,
+          platform,
+          contentType: selectedTemplate?.contentType ?? 'post',
+        }),
+      })
+      const json = await res.json()
+      if (res.status === 402 || json.limitReached) {
+        setLimitReached(true)
+        return
+      }
+      if (!res.ok) {
+        setGenerateError(json.error ?? 'Generation failed')
+        return
+      }
+      setDraft(json.draft ?? '')
+      setHashtags(json.hashtags ?? [])
+    } finally {
+      setGenerating(false)
+    }
   }
 
   async function copyToClipboard() {
@@ -195,6 +210,20 @@ function GeneratePanel({ idea, onMarkPosted }: { idea: IdeaCardProps['idea']; on
           {generating ? 'Generating…' : 'Generate draft'}
         </button>
       </div>
+
+      {/* Limit reached / error */}
+      {limitReached && (
+        <div style={{ margin: '0 14px 14px', padding: '14px 16px', background: '#fef3c7', borderRadius: 10, border: '1px solid #fde68a', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Zap style={{ width: 16, height: 16, color: '#d97706', flexShrink: 0 }} />
+          <span style={{ fontSize: 13, color: '#92400e', flex: 1 }}>Monthly AI limit reached.</span>
+          <a href="/pricing" style={{ fontSize: 13, fontWeight: 700, color: '#4f46e5', textDecoration: 'underline', whiteSpace: 'nowrap' }}>Upgrade</a>
+        </div>
+      )}
+      {generateError && (
+        <div style={{ margin: '0 14px 14px', padding: '10px 14px', background: '#fee2e2', borderRadius: 8, fontSize: 13, color: '#991b1b' }}>
+          {generateError}
+        </div>
+      )}
 
       {/* Draft editor */}
       {draft && (

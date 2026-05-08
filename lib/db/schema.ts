@@ -82,6 +82,13 @@ export const users = pgTable('users', {
   // Free tier usage tracking — resets monthly
   monthlyUsage:       integer('monthly_usage').default(0),
   usageResetAt:       timestamp('usage_reset_at'),
+  // Stripe billing
+  stripeCustomerId:     text('stripe_customer_id'),
+  stripeSubscriptionId: text('stripe_subscription_id'),
+  stripePriceId:        text('stripe_price_id'),
+  subscriptionStatus:   text('subscription_status'),           // 'active' | 'past_due' | 'canceled' | 'trialing'
+  subscriptionTier:     text('subscription_tier').default('free'), // 'free' | 'creator' | 'creator_pro' | 'enterprise'
+  currentPeriodEnd:     timestamp('current_period_end'),
   createdAt:          timestamp('created_at').defaultNow().notNull(),
   updatedAt:          timestamp('updated_at').defaultNow().notNull(),
 })

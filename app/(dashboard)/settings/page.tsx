@@ -7,9 +7,10 @@ import { getMemoryCount } from '@/lib/db/queries/memory'
 import { getUserHookPerformance } from '@/lib/db/queries/analytics'
 import { UserButton } from '@clerk/nextjs'
 import { MOCK_AUTH } from '@/lib/auth'
-import { NicheSettings } from '@/components/settings/niche-settings'
-import { PromptVault }   from '@/components/settings/prompt-vault'
-import { LLMSettings }   from '@/components/settings/llm-settings'
+import { NicheSettings }   from '@/components/settings/niche-settings'
+import { PromptVault }     from '@/components/settings/prompt-vault'
+import { LLMSettings }     from '@/components/settings/llm-settings'
+import { BillingSettings } from '@/components/billing/billing-settings'
 
 const stackItems = [
   { label: 'Auth',              value: 'Clerk' },
@@ -35,12 +36,18 @@ const cardBodyStyle: React.CSSProperties = {
   padding: '18px 22px',
 }
 
-export default async function SettingsPage() {
-  const [user, clerkUser] = await Promise.all([
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ upgraded?: string }>
+}) {
+  const [user, clerkUser, params] = await Promise.all([
     getOrCreateDbUser(),
     getCurrentUser(),
+    searchParams,
   ])
   if (!user) redirect('/sign-in')
+  const showUpgradeSuccess = params?.upgraded === 'true'
 
   const [contentCount, memoryCount, hookPerf] = await Promise.all([
     getContentCount(user.id),
@@ -101,6 +108,9 @@ export default async function SettingsPage() {
               ))}
             </div>
           </div>
+
+          {/* Billing */}
+          <BillingSettings showUpgradeSuccess={showUpgradeSuccess} />
 
           {/* AI Provider */}
           <LLMSettings />
