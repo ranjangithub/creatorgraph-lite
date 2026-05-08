@@ -1,8 +1,14 @@
+import { MOCK_AUTH } from '@/lib/auth'
 import { SignUp } from '@clerk/nextjs'
+import { OnboardingWizard } from '@/components/onboarding/wizard'
 
 export default function SignUpPage() {
+  if (MOCK_AUTH) {
+    return <OnboardingWizard />
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50">
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fafafa' }}>
       <SignUp />
     </div>
   )

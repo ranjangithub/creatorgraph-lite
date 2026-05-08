@@ -1,99 +1,165 @@
+import { redirect } from 'next/navigation'
+import { getServerAuth } from '@/lib/auth'
 import Link from 'next/link'
-import { Button } from '@/components/ui/button'
-import { Brain, Zap, Shield, ArrowRight } from 'lucide-react'
+import { ArrowRight, Sparkles, CheckCircle, Brain, Zap, Shield, TrendingUp, MessageCircle, Repeat, ChevronDown } from 'lucide-react'
 
-const features = [
-  {
-    icon: Brain,
-    title: 'Memory, not RAG',
-    body: 'Your past content is pre-compiled into structured knowledge — the Karpathy LLM Wiki pattern. No vector search, no re-reading raw posts every time.',
-  },
-  {
-    icon: Zap,
-    title: 'Evidence-backed ideas',
-    body: 'Every content idea comes with a rationale tied to your actual history: what performed, what questions your audience asked, what competitors missed.',
-  },
-  {
-    icon: Shield,
-    title: 'Repetition guard',
-    body: 'Before suggesting an idea, the system checks your archive. New angle, sequel, or repeat — you\'ll know before you write a word.',
-  },
+/* ─── Data ─────────────────────────────────────────────────── */
+
+const pain = [
+  { emoji: '😩', title: '"I have no idea what to post next"', body: 'You stare at a blank screen every Monday. You\'ve written hundreds of posts but your brain treats each one like starting from zero.' },
+  { emoji: '🔁', title: '"I keep saying the same things"', body: 'Your followers notice before you do. A comment says "didn\'t you write about this 3 months ago?" — and you have no idea.' },
+  { emoji: '🤖', title: '"ChatGPT gives me generic garbage"', body: 'AI ideas don\'t know your audience, your voice, or what you\'ve already covered. They\'re not wrong. They\'re just not you.' },
+  { emoji: '📉', title: '"I have no idea what actually works"', body: 'You don\'t know which topics resonate, which hooks convert, or what your audience keeps asking that you never answer.' },
 ]
 
-export default function LandingPage() {
+const features = [
+  { icon: Brain,         color: '#4f46e5', bg: '#ede9fe', border: '#c4b5fd', title: 'Your entire content history becomes context', body: 'Every post you\'ve ever written is analysed, tagged, and compiled into a structured knowledge base. Your AI advisor knows your full archive — not just the last 5 posts.' },
+  { icon: Repeat,        color: '#dc2626', bg: '#fee2e2', border: '#fca5a5', title: 'Repetition guard', body: 'Before suggesting anything, CreatorGraph checks your full archive. Every idea is tagged: New angle, Sequel, or Repeat. You\'ll know before you write a word.' },
+  { icon: MessageCircle, color: '#0891b2', bg: '#e0f2fe', border: '#7dd3fc', title: 'Open audience questions surfaced', body: 'Questions your audience keeps asking — extracted from your post context — are tracked as open items. You see the gaps nobody in your niche has answered yet.' },
+  { icon: TrendingUp,    color: '#059669', bg: '#ecfdf5', border: '#6ee7b7', title: 'Competitor gap in every idea', body: 'Every suggested idea includes what angle your niche peers are missing. You write things only you can write, from an operator\'s perspective.' },
+  { icon: Zap,           color: '#d97706', bg: '#fffbeb', border: '#fde68a', title: 'Daily briefing in seconds', body: 'Each morning your knowledge graph loads and you get 3–5 ranked content ideas with rationale, hook, audience fit, and validation score.' },
+  { icon: Shield,        color: '#7c3aed', bg: '#f3e8ff', border: '#d8b4fe', title: 'Evidence behind every idea', body: 'No gut-feel content strategy. Every suggestion shows you exactly why — which topics you cover, what signals support it, what the audience pain point is.' },
+]
+
+const faq = [
+  { q: 'Is my LinkedIn data safe?', a: 'Your export file is processed and stored in your own database instance. We don\'t train on your data or share it.' },
+  { q: 'Do I need a LinkedIn Premium account?', a: 'No. The data export works with any LinkedIn account — free or premium. It\'s a standard privacy feature under Settings → Data Privacy.' },
+  { q: 'What AI model powers this?', a: 'Anthropic Claude (claude-3-5-haiku). On the Starter plan you bring your own API key. On Pro, credits are included.' },
+  { q: 'How long does setup take?', a: 'About 5 minutes. Upload your LinkedIn export, wait ~60 seconds for Claude to build your knowledge graph, then generate your first briefing.' },
+  { q: 'Does it work for niches outside tech?', a: 'The knowledge graph pattern is niche-agnostic — it works anywhere you have a content archive. Early testing has been tech-focused but the system is general.' },
+  { q: 'This is a new product. What if it doesn\'t work out?', a: 'Fair question. The Starter plan is free and your data export is just a file — you can delete it any time. Pro subscribers can cancel any month. We\'ll give at least 30 days notice of any shutdown.' },
+]
+
+/* ─── Sub-components ────────────────────────────────────────── */
+
+function Nav() {
   return (
-    <div className="min-h-screen bg-white">
-      {/* Nav */}
-      <nav className="border-b border-slate-100 px-6 py-4 flex items-center justify-between max-w-5xl mx-auto">
-        <div className="flex items-center gap-2">
-          <Brain size={20} className="text-primary" />
-          <span className="font-semibold text-slate-900">CreatorGraph Lite</span>
+    <nav style={{ position: 'sticky', top: 0, zIndex: 100, background: 'rgba(15,12,41,0.95)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(165,180,252,0.1)' }}>
+      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 28px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 32, height: 32, borderRadius: 9, background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid rgba(165,180,252,0.3)' }}>
+            <Sparkles size={14} color="#fff" />
+          </div>
+          <span style={{ fontWeight: 800, color: '#fff', fontSize: 15, letterSpacing: '-0.3px' }}>CreatorGraph</span>
+          <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 5, background: 'rgba(52,211,153,0.15)', color: '#34d399', border: '1px solid rgba(52,211,153,0.25)', letterSpacing: 1 }}>EARLY ACCESS</span>
         </div>
-        <div className="flex items-center gap-3">
-          <Button asChild variant="ghost" size="sm">
-            <Link href="/sign-in">Sign in</Link>
-          </Button>
-          <Button asChild size="sm">
-            <Link href="/sign-up">Get started</Link>
-          </Button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <a href="#pricing" style={{ color: 'rgba(165,180,252,0.7)', fontSize: 13, fontWeight: 500, padding: '6px 12px', textDecoration: 'none' }}>Pricing</a>
+          <Link href="/sign-in" style={{ color: 'rgba(165,180,252,0.7)', fontSize: 13, fontWeight: 500, padding: '6px 12px', textDecoration: 'none' }}>Sign in</Link>
+          <Link href="/sign-up" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 18px', background: '#4f46e5', color: '#fff', borderRadius: 8, fontSize: 13, fontWeight: 700, textDecoration: 'none', boxShadow: '0 0 16px rgba(99,102,241,0.4)' }}>
+            Try it free <ArrowRight size={13} />
+          </Link>
         </div>
-      </nav>
+      </div>
+    </nav>
+  )
+}
 
-      {/* Hero */}
-      <section className="max-w-3xl mx-auto px-6 pt-20 pb-16 text-center">
-        <div className="inline-flex items-center gap-2 bg-primary/8 text-primary text-xs font-semibold px-3 py-1.5 rounded-full mb-6">
-          <Zap size={12} />
-          Context Engineering for content creators
-        </div>
-        <h1 className="text-4xl font-bold text-slate-900 leading-tight mb-5">
-          Your LinkedIn content history,<br />turned into structured memory
-        </h1>
-        <p className="text-lg text-slate-500 leading-relaxed mb-8 max-w-xl mx-auto">
-          Import your LinkedIn export. CreatorGraph builds a knowledge graph from your posts,
-          then generates daily content ideas that actually fit your voice and audience — not generic trends.
-        </p>
-        <div className="flex items-center justify-center gap-3">
-          <Button asChild size="lg" className="gap-2">
-            <Link href="/sign-up">
-              Start for free <ArrowRight size={16} />
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 2.5, textTransform: 'uppercase', color: '#6366f1', marginBottom: 14 }}>{children}</div>
+}
+
+/* ─── Page ──────────────────────────────────────────────────── */
+
+export default async function MarketingPage() {
+  const { clerkId } = await getServerAuth()
+  if (clerkId) redirect('/dashboard')
+  return (
+    <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif', color: '#1a1a2e', background: '#fff', minHeight: '100vh', lineHeight: 1.65 }}>
+
+      <Nav />
+
+      {/* ── HERO ──────────────────────────────────────────────── */}
+      <section style={{ background: 'linear-gradient(160deg, #0f0c29 0%, #302b63 55%, #1a1740 100%)', padding: '88px 28px 80px', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', inset: 0, opacity: 0.035, backgroundImage: 'linear-gradient(rgba(255,255,255,.4) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.4) 1px, transparent 1px)', backgroundSize: '44px 44px' }} />
+        <div style={{ position: 'absolute', top: '-80px', left: '50%', transform: 'translateX(-50%)', width: 700, height: 500, background: 'radial-gradient(ellipse at top, rgba(99,102,241,0.18) 0%, transparent 70%)', pointerEvents: 'none' }} />
+
+        <div style={{ maxWidth: 780, margin: '0 auto', textAlign: 'center', position: 'relative' }}>
+
+          {/* Honest badge */}
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.2)', borderRadius: 40, padding: '6px 16px', marginBottom: 28 }}>
+            <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#34d399' }} />
+            <span style={{ fontSize: 12, color: '#6ee7b7', fontWeight: 600 }}>Early access — built in public, actively improving</span>
+          </div>
+
+          <h1 style={{ fontSize: 'clamp(32px, 5.5vw, 58px)', fontWeight: 900, color: '#fff', lineHeight: 1.12, letterSpacing: '-1.5px', marginBottom: 22 }}>
+            Your years of LinkedIn content<br />
+            <span style={{ background: 'linear-gradient(90deg, #818cf8, #a78bfa, #c084fc)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+              finally working for you
+            </span>
+          </h1>
+
+          <p style={{ fontSize: 'clamp(16px, 2vw, 20px)', color: 'rgba(255,255,255,0.6)', maxWidth: 580, margin: '0 auto 36px', lineHeight: 1.6 }}>
+            CreatorGraph turns your post archive into a structured AI memory that generates daily content ideas grounded in your actual voice, audience, and history — not generic trends.
+          </p>
+
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 40 }}>
+            <Link href="/sign-up" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '15px 30px', background: '#4f46e5', color: '#fff', borderRadius: 10, fontSize: 15, fontWeight: 800, textDecoration: 'none', boxShadow: '0 0 30px rgba(99,102,241,0.45)', letterSpacing: '-0.2px' }}>
+              Get started free <ArrowRight size={16} />
             </Link>
-          </Button>
-          <Button asChild size="lg" variant="outline">
-            <Link href="/sign-in">Sign in</Link>
-          </Button>
-        </div>
-      </section>
+            <a href="#how" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '15px 24px', background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.8)', border: '1px solid rgba(165,180,252,0.2)', borderRadius: 10, fontSize: 15, fontWeight: 600, textDecoration: 'none' }}>
+              See how it works
+            </a>
+          </div>
 
-      {/* Features */}
-      <section className="max-w-4xl mx-auto px-6 pb-20">
-        <div className="grid md:grid-cols-3 gap-6">
-          {features.map(({ icon: Icon, title, body }) => (
-            <div key={title} className="p-6 rounded-xl border border-slate-100 bg-slate-50/50">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                <Icon size={18} className="text-primary" />
+          <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '8px 28px' }}>
+            {['Free tier available', 'Bring your own Anthropic key', '5-min setup', 'Cancel Pro any time'].map(p => (
+              <div key={p} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'rgba(165,180,252,0.55)' }}>
+                <CheckCircle size={12} color="#34d399" />
+                {p}
               </div>
-              <h3 className="font-semibold text-slate-900 mb-2">{title}</h3>
-              <p className="text-sm text-slate-500 leading-relaxed">{body}</p>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* How it works */}
-      <section className="bg-slate-50 border-t border-slate-100">
-        <div className="max-w-3xl mx-auto px-6 py-16">
-          <h2 className="text-2xl font-bold text-slate-900 text-center mb-10">How it works</h2>
-          <div className="space-y-8">
+      {/* ── PAIN SECTION ──────────────────────────────────────── */}
+      <section style={{ background: '#fafafa', padding: '80px 28px' }}>
+        <div style={{ maxWidth: 900, margin: '0 auto' }}>
+          <SectionLabel>The problem</SectionLabel>
+          <h2 style={{ fontSize: 'clamp(24px, 3.5vw, 36px)', fontWeight: 800, color: '#0f0c29', marginBottom: 12, letterSpacing: '-0.5px', lineHeight: 1.2 }}>
+            You're brilliant at what you do.<br />Content strategy is eating you alive.
+          </h2>
+          <p style={{ fontSize: 16, color: '#4b5563', maxWidth: 540, marginBottom: 48, lineHeight: 1.7 }}>
+            It's not a creativity problem. It's a memory and system problem. Every week you face the same friction.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
+            {pain.map(({ emoji, title, body }) => (
+              <div key={title} style={{ background: '#fff', border: '1px solid #e0e7ff', borderRadius: 14, padding: '24px 24px' }}>
+                <div style={{ fontSize: 28, marginBottom: 10 }}>{emoji}</div>
+                <h3 style={{ fontSize: 15, fontWeight: 800, color: '#0f0c29', marginBottom: 8 }}>{title}</h3>
+                <p style={{ fontSize: 13, color: '#4b5563', lineHeight: 1.7 }}>{body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── HOW IT WORKS ──────────────────────────────────────── */}
+      <section id="how" style={{ background: 'linear-gradient(135deg, #0f0c29 0%, #1a1740 100%)', padding: '80px 28px', borderTop: '1px solid rgba(165,180,252,0.1)' }}>
+        <div style={{ maxWidth: 760, margin: '0 auto' }}>
+          <SectionLabel>How it works</SectionLabel>
+          <h2 style={{ fontSize: 'clamp(24px, 3.5vw, 36px)', fontWeight: 800, color: '#fff', marginBottom: 12, letterSpacing: '-0.5px' }}>
+            5 minutes to set up.<br />Works on your own data from day one.
+          </h2>
+          <p style={{ fontSize: 16, color: 'rgba(165,180,252,0.6)', marginBottom: 56, maxWidth: 480, lineHeight: 1.7 }}>
+            No developer setup. No weekly prompt engineering. Your history does the work.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
             {[
-              { n: '01', title: 'Import your history', body: 'Download your LinkedIn data export (Settings → Data Privacy → Get a copy). Upload the CSV here in seconds.' },
-              { n: '02', title: 'Memory is built', body: 'Claude reads every post and extracts structured knowledge: your expertise, your audience\'s questions, your voice patterns, what performed.' },
-              { n: '03', title: 'Generate your daily briefing', body: 'Each day, load your memory into context and get 3-5 content ideas ranked by validation score — grounded in your actual history.' },
-            ].map(({ n, title, body }) => (
-              <div key={n} className="flex gap-6">
-                <div className="text-3xl font-bold text-primary/20 shrink-0 w-12">{n}</div>
-                <div className="pt-1">
-                  <p className="font-semibold text-slate-900 mb-1">{title}</p>
-                  <p className="text-sm text-slate-500 leading-relaxed">{body}</p>
+              { n: '01', title: 'Export your LinkedIn history', body: 'Go to LinkedIn Settings → Data Privacy → Get a copy of your data. Request your posts archive. You\'ll have a CSV in about 10 minutes.', tag: '~10 min' },
+              { n: '02', title: 'Upload — your knowledge graph is built', body: 'Drop the CSV into CreatorGraph. Claude reads every post and extracts topics, hooks, audience questions, voice patterns, and content gaps. Your entire history, structured.', tag: '~60 seconds' },
+              { n: '03', title: 'Get your daily briefing', body: 'Each morning, your knowledge graph is compiled into context and you get 3–5 ranked content ideas — each with a hook, audience fit, competitor gap, and validation score.', tag: 'Daily' },
+            ].map(({ n, title, body, tag }, i) => (
+              <div key={n} style={{ display: 'flex', gap: 22, paddingBottom: 40, position: 'relative' }}>
+                {i < 2 && <div style={{ position: 'absolute', left: 22, top: 44, bottom: 0, width: 2, background: 'linear-gradient(180deg, rgba(165,180,252,0.25) 0%, transparent 100%)' }} />}
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(165,180,252,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 12, fontWeight: 800, color: '#a5b4fc', zIndex: 1 }}>{n}</div>
+                <div style={{ paddingTop: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
+                    <h3 style={{ fontSize: 17, fontWeight: 700, color: '#fff', letterSpacing: '-0.2px' }}>{title}</h3>
+                    <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 20, background: 'rgba(52,211,153,0.1)', color: '#34d399', border: '1px solid rgba(52,211,153,0.2)' }}>{tag}</span>
+                  </div>
+                  <p style={{ fontSize: 14, color: 'rgba(165,180,252,0.65)', lineHeight: 1.75 }}>{body}</p>
                 </div>
               </div>
             ))}
@@ -101,20 +167,154 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="max-w-2xl mx-auto px-6 py-16 text-center">
-        <h2 className="text-2xl font-bold text-slate-900 mb-4">Start building your content memory</h2>
-        <p className="text-slate-500 mb-6">Free to use. No credit card required.</p>
-        <Button asChild size="lg" className="gap-2">
-          <Link href="/sign-up">
-            Get started <ArrowRight size={16} />
-          </Link>
-        </Button>
+      {/* ── FEATURES ──────────────────────────────────────────── */}
+      <section style={{ background: '#fff', padding: '80px 28px' }}>
+        <div style={{ maxWidth: 960, margin: '0 auto' }}>
+          <SectionLabel>What's built</SectionLabel>
+          <h2 style={{ fontSize: 'clamp(24px, 3.5vw, 36px)', fontWeight: 800, color: '#0f0c29', marginBottom: 10, letterSpacing: '-0.5px' }}>
+            A content advisor that knows your archive
+          </h2>
+          <p style={{ fontSize: 15, color: '#6b7280', marginBottom: 48, maxWidth: 520, lineHeight: 1.7 }}>
+            These features are live today. Not a roadmap — things you can actually use when you sign up.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>
+            {features.map(({ icon: Icon, color, bg, border, title, body }) => (
+              <div key={title} className="feature-card" style={{ background: '#fff', border: `1px solid ${border}`, borderRadius: 14, padding: '26px 24px' }}>
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: bg, border: `1px solid ${border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+                  <Icon size={20} color={color} />
+                </div>
+                <h3 style={{ fontSize: 15, fontWeight: 800, color: '#0f0c29', marginBottom: 8, lineHeight: 1.35 }}>{title}</h3>
+                <p style={{ fontSize: 13, color: '#4b5563', lineHeight: 1.75 }}>{body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
       </section>
 
-      <footer className="border-t border-slate-100 py-6 text-center text-xs text-slate-400">
-        CreatorGraph Lite — built with Next.js, Clerk, Supabase, and Anthropic Claude
+      {/* ── PRICING ───────────────────────────────────────────── */}
+      <section id="pricing" style={{ background: '#fafafa', padding: '80px 28px', borderTop: '1px solid #e0e7ff' }}>
+        <div style={{ maxWidth: 840, margin: '0 auto' }}>
+          <SectionLabel>Pricing</SectionLabel>
+          <h2 style={{ fontSize: 'clamp(24px, 3.5vw, 36px)', fontWeight: 800, color: '#0f0c29', marginBottom: 10, letterSpacing: '-0.5px' }}>
+            Simple, honest pricing
+          </h2>
+          <p style={{ fontSize: 16, color: '#4b5563', marginBottom: 48, maxWidth: 460, lineHeight: 1.7 }}>
+            Start free. Upgrade only if it's worth it. No dark patterns, no annual lock-in pushed at checkout.
+          </p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, alignItems: 'start' }}>
+            {/* Starter */}
+            <div style={{ background: '#fff', border: '1px solid #e0e7ff', borderRadius: 18, padding: '36px 30px' }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#6b7280', marginBottom: 8 }}>Starter</div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 6 }}>
+                <span style={{ fontSize: 44, fontWeight: 900, color: '#0f0c29', letterSpacing: '-2px' }}>$0</span>
+                <span style={{ fontSize: 15, color: '#6b7280' }}>/month</span>
+              </div>
+              <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 28, lineHeight: 1.65 }}>Bring your own Anthropic API key (about $0.10–0.50/month in usage). Everything is fully functional.</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 32 }}>
+                {[
+                  'Unlimited post imports',
+                  'Full knowledge graph — topics, hooks, audience questions',
+                  'Daily briefing — 3–5 ideas per day',
+                  'Repetition guard',
+                  'Competitor gap in every idea',
+                  'You supply the Anthropic API key',
+                ].map(f => (
+                  <div key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                    <CheckCircle size={14} color="#6366f1" style={{ flexShrink: 0, marginTop: 2 }} />
+                    <span style={{ fontSize: 13, color: '#374151', lineHeight: 1.5 }}>{f}</span>
+                  </div>
+                ))}
+              </div>
+              <Link href="/sign-up" style={{ display: 'block', textAlign: 'center', padding: '12px', background: '#fff', border: '1.5px solid #4f46e5', color: '#4f46e5', borderRadius: 9, fontSize: 14, fontWeight: 700, textDecoration: 'none' }}>
+                Start free
+              </Link>
+            </div>
+
+            {/* Pro */}
+            <div style={{ background: 'linear-gradient(160deg, #0f0c29 0%, #302b63 100%)', border: '1px solid rgba(165,180,252,0.15)', borderRadius: 18, padding: '36px 30px' }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#a5b4fc', marginBottom: 8 }}>Pro</div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 6 }}>
+                <span style={{ fontSize: 44, fontWeight: 900, color: '#fff', letterSpacing: '-2px' }}>$29</span>
+                <span style={{ fontSize: 15, color: 'rgba(165,180,252,0.55)' }}>/month</span>
+              </div>
+              <p style={{ fontSize: 13, color: 'rgba(165,180,252,0.6)', marginBottom: 28, lineHeight: 1.65 }}>Managed Claude credits included — no API key needed. For creators who want zero friction and are using this daily.</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 32 }}>
+                {[
+                  'Everything in Starter',
+                  'Managed Claude credits — no API key needed',
+                  'Unlimited on-demand briefing generation',
+                  'Priority support (direct reply, not a ticket queue)',
+                  'Input on the roadmap — early users shape the product',
+                ].map(f => (
+                  <div key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                    <CheckCircle size={14} color="#34d399" style={{ flexShrink: 0, marginTop: 2 }} />
+                    <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', lineHeight: 1.5 }}>{f}</span>
+                  </div>
+                ))}
+              </div>
+              <Link href="/sign-up" style={{ display: 'block', textAlign: 'center', padding: '13px', background: '#4f46e5', color: '#fff', borderRadius: 9, fontSize: 14, fontWeight: 700, textDecoration: 'none', boxShadow: '0 0 20px rgba(99,102,241,0.4)' }}>
+                Upgrade to Pro
+              </Link>
+              <p style={{ textAlign: 'center', fontSize: 11, color: 'rgba(165,180,252,0.35)', marginTop: 10 }}>Cancel any time from your dashboard</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── FAQ ───────────────────────────────────────────────── */}
+      <section style={{ background: '#fff', padding: '80px 28px', borderTop: '1px solid #e0e7ff' }}>
+        <div style={{ maxWidth: 680, margin: '0 auto' }}>
+          <SectionLabel>Questions</SectionLabel>
+          <h2 style={{ fontSize: 'clamp(22px, 3vw, 32px)', fontWeight: 800, color: '#0f0c29', marginBottom: 40, letterSpacing: '-0.5px' }}>Honest answers</h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {faq.map(({ q, a }) => (
+              <details key={q} style={{ background: '#fafbff', border: '1px solid #e0e7ff', borderRadius: 12, overflow: 'hidden' }}>
+                <summary style={{ padding: '18px 22px', fontSize: 14, fontWeight: 700, color: '#0f0c29', cursor: 'pointer', listStyle: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  {q} <ChevronDown size={16} color="#6366f1" />
+                </summary>
+                <p style={{ padding: '14px 22px 18px', fontSize: 14, color: '#4b5563', lineHeight: 1.75, borderTop: '1px solid #e0e7ff', margin: 0 }}>{a}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── FINAL CTA ─────────────────────────────────────────── */}
+      <section style={{ background: 'linear-gradient(160deg, #0f0c29 0%, #302b63 55%, #24243e 100%)', padding: '96px 28px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 600, height: 400, background: 'radial-gradient(ellipse, rgba(99,102,241,0.18) 0%, transparent 70%)', pointerEvents: 'none' }} />
+        <div style={{ position: 'relative', maxWidth: 580, margin: '0 auto' }}>
+          <h2 style={{ fontSize: 'clamp(26px, 4vw, 44px)', fontWeight: 900, color: '#fff', marginBottom: 16, letterSpacing: '-1px', lineHeight: 1.15 }}>
+            Stop starting from scratch.<br />
+            <span style={{ background: 'linear-gradient(90deg, #818cf8, #c084fc)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+              Every post should build on the last.
+            </span>
+          </h2>
+          <p style={{ fontSize: 17, color: 'rgba(255,255,255,0.5)', marginBottom: 14, lineHeight: 1.65 }}>
+            This is early software. It works, and it'll get better — especially with early users who care enough to give feedback.
+          </p>
+          <p style={{ fontSize: 14, color: 'rgba(165,180,252,0.45)', marginBottom: 40 }}>
+            Free tier available. No credit card. Built in public.
+          </p>
+          <Link href="/sign-up" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '17px 36px', background: '#4f46e5', color: '#fff', borderRadius: 12, fontSize: 16, fontWeight: 800, textDecoration: 'none', boxShadow: '0 0 40px rgba(99,102,241,0.45)', letterSpacing: '-0.2px' }}>
+            Get started free <ArrowRight size={18} />
+          </Link>
+        </div>
+      </section>
+
+      {/* ── FOOTER ────────────────────────────────────────────── */}
+      <footer style={{ background: '#0f0c29', borderTop: '1px solid rgba(165,180,252,0.08)', padding: '36px 28px' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 28, height: 28, borderRadius: 7, background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Sparkles size={12} color="#fff" />
+            </div>
+            <span style={{ fontWeight: 800, color: 'rgba(255,255,255,0.6)', fontSize: 13 }}>CreatorGraph</span>
+          </div>
+          <p style={{ fontSize: 12, color: 'rgba(165,180,252,0.2)' }}>Built with Next.js · Drizzle · Supabase · Anthropic Claude</p>
+        </div>
       </footer>
+
     </div>
   )
 }

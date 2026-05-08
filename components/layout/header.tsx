@@ -8,17 +8,29 @@ interface HeaderProps {
 
 export function Header({ title, description }: HeaderProps) {
   return (
-    <header className="h-14 border-b bg-white flex items-center justify-between px-6 shrink-0">
+    <header style={{
+      height: 56,
+      borderBottom: '1px solid #e0e7ff',
+      background: '#fff',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: '0 24px',
+      flexShrink: 0,
+      position: 'sticky',
+      top: 0,
+      zIndex: 10,
+    }}>
       <div>
-        <h1 className="text-sm font-semibold text-slate-900">{title}</h1>
-        {description && <p className="text-xs text-slate-500">{description}</p>}
+        <h1 style={{ fontSize: 14, fontWeight: 700, color: '#0f0c29', letterSpacing: '-0.2px', lineHeight: 1.3 }}>{title}</h1>
+        {description && <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 1 }}>{description}</p>}
       </div>
       {MOCK_AUTH ? (
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 12px', background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 20 }}>
+          <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: '#fff' }}>
             {MOCK_USER_NAME[0]}
           </div>
-          <span className="text-xs text-slate-400">mock mode</span>
+          <span style={{ fontSize: 12, fontWeight: 600, color: '#92400e' }}>mock mode</span>
         </div>
       ) : (
         <UserButton afterSignOutUrl="/" />

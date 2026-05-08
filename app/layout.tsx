@@ -6,20 +6,18 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title:       'CreatorGraph Lite — LinkedIn Memory for Professionals',
+  title:       'CreatorGraph Beta — LinkedIn Memory for Professionals',
   description: 'Context-engineering-powered content memory for LinkedIn thought leaders.',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const isMock = process.env.MOCK_AUTH === 'true'
 
-  const body = (
+  return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>{children}</body>
+      <body className={inter.className}>
+        {isMock ? children : <ClerkProvider>{children}</ClerkProvider>}
+      </body>
     </html>
   )
-
-  if (isMock) return body
-
-  return <ClerkProvider>{body}</ClerkProvider>
 }
