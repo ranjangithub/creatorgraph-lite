@@ -8,7 +8,8 @@ import { getUserHookPerformance } from '@/lib/db/queries/analytics'
 import { UserButton } from '@clerk/nextjs'
 import { MOCK_AUTH } from '@/lib/auth'
 import { NicheSettings } from '@/components/settings/niche-settings'
-import { PromptVault } from '@/components/settings/prompt-vault'
+import { PromptVault }   from '@/components/settings/prompt-vault'
+import { LLMSettings }   from '@/components/settings/llm-settings'
 
 const stackItems = [
   { label: 'Auth',              value: 'Clerk' },
@@ -100,6 +101,9 @@ export default async function SettingsPage() {
               ))}
             </div>
           </div>
+
+          {/* AI Provider */}
+          <LLMSettings />
 
           {/* Prompt Vault */}
           <PromptVault />

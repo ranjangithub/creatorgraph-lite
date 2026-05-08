@@ -1,10 +1,13 @@
-import { NextResponse } from 'next/server'
-import { getOrCreateDbUser } from '@/lib/auth'
-import { anthropic, MODEL, MAX_TOKENS, isMockMode } from '@/lib/anthropic/client'
+import { NextResponse }          from 'next/server'
+import { HumanMessage }          from '@langchain/core/messages'
+import { getOrCreateDbUser }     from '@/lib/auth'
+import { getLLMClient }          from '@/lib/ai/client'
+import { LLMLimitError }         from '@/lib/ai/types'
+import { isMockMode }            from '@/lib/anthropic/client'
 import { getPromptTemplate, saveGeneratedDraft } from '@/lib/db/queries/prompts'
 import { db, ideas, contentItems } from '@/lib/db'
-import { eq, and, desc } from 'drizzle-orm'
-import { getPlatformAdapter } from '@/lib/platforms/registry'
+import { eq, and, desc }         from 'drizzle-orm'
+import { getPlatformAdapter }    from '@/lib/platforms/registry'
 import type { Platform, ContentType } from '@/lib/platforms/types'
 
 const MOCK_DRAFT: Record<string, string> = {
@@ -52,61 +55,61 @@ Outline:
 }
 
 export async function POST(req: Request) {
-  const user = await getOrCreateDbUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  try {
+    const user = await getOrCreateDbUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const body = await req.json()
-  const { ideaId, templateId, platform = 'linkedin', contentType = 'post' } = body
+    const body = await req.json()
+    const { ideaId, templateId, platform = 'linkedin', contentType = 'post' } = body
 
-  // Load idea
-  const [idea] = await db.select().from(ideas)
-    .where(and(eq(ideas.id, ideaId), eq(ideas.userId, user.id)))
-  if (!idea) return NextResponse.json({ error: 'Idea not found' }, { status: 404 })
+    const [idea] = await db.select().from(ideas)
+      .where(and(eq(ideas.id, ideaId), eq(ideas.userId, user.id)))
+    if (!idea) return NextResponse.json({ error: 'Idea not found' }, { status: 404 })
 
-  // Load template
-  const template = templateId ? await getPromptTemplate(templateId, user.id) : null
+    const template = templateId ? await getPromptTemplate(templateId, user.id) : null
 
-  // Load recent content for context (last 5 posts on this platform)
-  const recentContent = await db.select({ title: contentItems.title, body: contentItems.body })
-    .from(contentItems)
-    .where(and(eq(contentItems.userId, user.id), eq(contentItems.platform, platform as Platform)))
-    .orderBy(desc(contentItems.publishedAt))
-    .limit(5)
+    const recentContent = await db
+      .select({ title: contentItems.title, body: contentItems.body })
+      .from(contentItems)
+      .where(and(eq(contentItems.userId, user.id), eq(contentItems.platform, platform as Platform)))
+      .orderBy(desc(contentItems.publishedAt))
+      .limit(5)
 
-  const contextBlock = recentContent.length
-    ? recentContent.map(c => `- ${c.title ?? ''}: ${c.body.slice(0, 300)}`).join('\n')
-    : 'No past content imported yet.'
+    const contextBlock = recentContent.length
+      ? recentContent.map(c => `- ${c.title ?? ''}: ${c.body.slice(0, 300)}`).join('\n')
+      : 'No past content imported yet.'
 
-  const adapter  = getPlatformAdapter(platform as Platform)
-  const hints    = adapter.getBriefingHints(contentType as ContentType)
-  const hashtags = template?.hashtags ?? []
+    const adapter  = getPlatformAdapter(platform as Platform)
+    const hints    = adapter.getBriefingHints(contentType as ContentType)
+    const hashtags = template?.hashtags ?? []
 
-  if (isMockMode) {
-    const draft = MOCK_DRAFT[platform] ?? MOCK_DRAFT.linkedin
-    const saved = await saveGeneratedDraft({
-      userId: user.id, ideaId, promptTemplateId: templateId,
-      platform, contentType, draft, hashtags,
-    })
-    return NextResponse.json({ draft, hashtags, draftId: saved.id })
-  }
+    if (isMockMode) {
+      const draft = MOCK_DRAFT[platform] ?? MOCK_DRAFT.linkedin
+      const saved = await saveGeneratedDraft({
+        userId: user.id, ideaId, promptTemplateId: templateId,
+        platform, contentType, draft, hashtags,
+      })
+      return NextResponse.json({ draft, hashtags, draftId: saved.id })
+    }
 
-  // Build the prompt
-  const voiceBlock = [
-    template?.brandVoice       && `Voice: ${template.brandVoice}`,
-    template?.toneInstructions && `Tone: ${template.toneInstructions}`,
-  ].filter(Boolean).join('\n')
+    const resolved = await getLLMClient(user.id)
 
-  const formatBlock = template?.formatInstructions
-    ? `Format instructions:\n${template.formatInstructions}`
-    : hints
+    const voiceBlock = [
+      template?.brandVoice       && `Voice: ${template.brandVoice}`,
+      template?.toneInstructions && `Tone: ${template.toneInstructions}`,
+    ].filter(Boolean).join('\n')
 
-  const hashtagBlock = hashtags.length
-    ? `Include these hashtags at the end: ${hashtags.join(' ')}`
-    : ''
+    const formatBlock = template?.formatInstructions
+      ? `Format instructions:\n${template.formatInstructions}`
+      : hints
 
-  const customBlock = template?.customPrompt || ''
+    const hashtagBlock = hashtags.length
+      ? `Include these hashtags at the end: ${hashtags.join(' ')}`
+      : ''
 
-  const prompt = `You are generating ${contentType} content for ${adapter.label}.
+    const customBlock = template?.customPrompt || ''
+
+    const prompt = `You are generating ${contentType} content for ${adapter.label}.
 
 ${voiceBlock}
 
@@ -130,18 +133,28 @@ ${hashtagBlock}
 
 Write the ${contentType} now. Output only the final ready-to-post text — no preamble, no "here's your post:", no explanation.`
 
-  const message = await anthropic.messages.create({
-    model:      MODEL,
-    max_tokens: MAX_TOKENS,
-    messages:   [{ role: 'user', content: prompt }],
-  })
+    const response = await resolved.model.invoke([new HumanMessage(prompt)])
+    const draft = typeof response.content === 'string'
+      ? response.content.trim()
+      : ((response.content[0] as { text?: string })?.text ?? '').trim()
 
-  const draft = message.content[0].type === 'text' ? message.content[0].text.trim() : ''
+    const saved = await saveGeneratedDraft({
+      userId: user.id, ideaId, promptTemplateId: templateId,
+      platform, contentType, draft, hashtags,
+    })
 
-  const saved = await saveGeneratedDraft({
-    userId: user.id, ideaId, promptTemplateId: templateId,
-    platform, contentType, draft, hashtags,
-  })
-
-  return NextResponse.json({ draft, hashtags, draftId: saved.id })
+    return NextResponse.json({
+      draft,
+      hashtags,
+      draftId:   saved.id,
+      provider:  resolved.provider,
+      remaining: resolved.remaining,
+    })
+  } catch (err) {
+    if (err instanceof LLMLimitError) {
+      return NextResponse.json({ error: err.message, limitReached: true }, { status: 402 })
+    }
+    console.error('[POST /api/generate]', err)
+    return NextResponse.json({ error: 'Failed to generate draft' }, { status: 500 })
+  }
 }

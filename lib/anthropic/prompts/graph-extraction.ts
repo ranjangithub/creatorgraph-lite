@@ -1,49 +1,46 @@
-import { anthropic, MODEL, MAX_TOKENS, isMockMode } from '@/lib/anthropic/client'
+import { HumanMessage }          from '@langchain/core/messages'
+import type { BaseChatModel }    from '@langchain/core/language_models/chat_models'
+import { isMockMode }            from '@/lib/anthropic/client'
 import { MOCK_GRAPH_EXTRACTION } from '@/lib/mock/fixtures'
-
-// ── Node types returned by graph extraction ────────────────────────────────
 
 export interface GraphExtraction {
   topics: Array<{
     name:        string
-    parentTopic: string | null  // higher-order concept, e.g. "software engineering"
-    hasGap:      boolean        // true = audience asks about this but creator hasn't covered it
-    confidence:  number         // 0-100
+    parentTopic: string | null
+    hasGap:      boolean
+    confidence:  number
   }>
   hooks: Array<{
     text:       string
     hookType:   'analogy' | 'framework' | 'opener' | 'statistic' | 'question'
     confidence: number
   }>
-  audienceSegments: string[]   // "CTOs" | "founders" | "students" etc.
+  audienceSegments:  string[]
   audienceQuestions: Array<{
     question:  string
-    painPoint: string           // the underlying frustration or need
-    segments:  string[]         // which segments asked this
-    resolved:  boolean          // did the creator ever directly answer this?
+    painPoint: string
+    segments:  string[]
+    resolved:  boolean
   }>
   contentTags: Array<{
-    index:   number             // 1-based, matches [N] in the prompt
-    topics:  string[]           // topic names this content covers
-    hooks:   string[]           // hook texts used in this content
+    index:  number
+    topics: string[]
+    hooks:  string[]
   }>
 }
 
-// ── Extract knowledge graph from a batch of content ───────────────────────
-// Runs once per import batch. Returns structured nodes ready to upsert.
-// The contentTags array links individual posts to the topics and hooks they use.
-
 export async function extractGraphFromContent(
   contentBatch: Array<{
-    index:       number
-    title?:      string
-    body:        string
-    platform:    string
+    index:        number
+    title?:       string
+    body:         string
+    platform:     string
     publishedAt?: string
-    views?:      number
-    likes?:      number
-    comments?:   number
-  }>
+    views?:       number
+    likes?:       number
+    comments?:    number
+  }>,
+  model: BaseChatModel,
 ): Promise<GraphExtraction> {
 
   if (isMockMode) return MOCK_GRAPH_EXTRACTION
@@ -90,13 +87,12 @@ Return ONLY a valid JSON object with this exact shape:
   ]
 }`
 
-  const response = await anthropic.messages.create({
-    model:      MODEL,
-    max_tokens: MAX_TOKENS,
-    messages:   [{ role: 'user', content: prompt }],
-  })
+  const response = await model.invoke([new HumanMessage(prompt)])
 
-  const raw = response.content[0].type === 'text' ? response.content[0].text : '{}'
+  const raw = typeof response.content === 'string'
+    ? response.content
+    : (response.content[0] as { text?: string })?.text ?? '{}'
+
   const jsonMatch = raw.match(/\{[\s\S]*\}/)
   if (!jsonMatch) return empty()
 

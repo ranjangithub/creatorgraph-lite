@@ -75,6 +75,13 @@ export const users = pgTable('users', {
   // Niche benchmarking
   niche:              text('niche'),
   shareForBenchmark:  boolean('share_for_benchmark').default(false),
+  // LLM provider — 'app' = use CreatorGraph's shared key (free tier)
+  llmProvider:        text('llm_provider').default('app'),   // 'app' | 'anthropic' | 'openai' | 'google'
+  llmApiKey:          text('llm_api_key'),                   // AES-256-GCM encrypted
+  llmModel:           text('llm_model'),                     // optional override e.g. 'gpt-4o', 'gemini-1.5-pro'
+  // Free tier usage tracking — resets monthly
+  monthlyUsage:       integer('monthly_usage').default(0),
+  usageResetAt:       timestamp('usage_reset_at'),
   createdAt:          timestamp('created_at').defaultNow().notNull(),
   updatedAt:          timestamp('updated_at').defaultNow().notNull(),
 })

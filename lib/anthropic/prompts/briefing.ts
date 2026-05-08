@@ -1,10 +1,12 @@
-import { anthropic, MODEL, MAX_TOKENS, isMockMode } from '@/lib/anthropic/client'
-import { MOCK_BRIEFING } from '@/lib/mock/fixtures'
-import type { CreatorContext } from '@/lib/anthropic/context/loader'
+import { SystemMessage, HumanMessage } from '@langchain/core/messages'
+import type { BaseChatModel }          from '@langchain/core/language_models/chat_models'
+import { isMockMode }                  from '@/lib/anthropic/client'
+import { MOCK_BRIEFING }               from '@/lib/mock/fixtures'
+import type { CreatorContext }          from '@/lib/anthropic/context/loader'
 
 export interface BriefingResult {
-  summary:  string
-  ideas:    IdeaSuggestion[]
+  summary:     string
+  ideas:       IdeaSuggestion[]
   rawResponse: string
 }
 
@@ -18,14 +20,7 @@ export interface IdeaSuggestion {
   validationScore: number   // 0–100
 }
 
-// ── Daily briefing prompt ──────────────────────────────────────────────────
-// Starts from memory. Never from generic research.
-// Produces 3-5 evidence-backed content ideas.
-
-export async function generateBriefing(ctx: CreatorContext): Promise<BriefingResult> {
-  if (isMockMode) return MOCK_BRIEFING
-
-  const systemPrompt = `You are a content strategist with deep knowledge of this creator's entire history.
+const SYSTEM_PROMPT = `You are a content strategist with deep knowledge of this creator's entire history.
 You have access to their memory, past content, and competitor landscape.
 
 Your job: recommend the creator's next best LinkedIn article — backed by their own evidence.
@@ -37,6 +32,12 @@ Rules:
 - Validate each idea: is this worth pursuing today? Score 0-100.
 - The best idea is the next logical move in the creator's body of work, not a generic suggestion.
 - Be direct. No filler. Lead with the recommendation.`
+
+export async function generateBriefing(
+  ctx:   CreatorContext,
+  model: BaseChatModel,
+): Promise<BriefingResult> {
+  if (isMockMode) return MOCK_BRIEFING
 
   const userPrompt = `${ctx.memoryBlock}${ctx.recentContent}${ctx.competitorBlock}
 
@@ -60,14 +61,14 @@ Return ONLY valid JSON in this exact shape:
   ]
 }`
 
-  const response = await anthropic.messages.create({
-    model:      MODEL,
-    max_tokens: MAX_TOKENS,
-    system:     systemPrompt,
-    messages:   [{ role: 'user', content: userPrompt }],
-  })
+  const response = await model.invoke([
+    new SystemMessage(SYSTEM_PROMPT),
+    new HumanMessage(userPrompt),
+  ])
 
-  const raw = response.content[0].type === 'text' ? response.content[0].text : ''
+  const raw = typeof response.content === 'string'
+    ? response.content
+    : (response.content[0] as { text?: string })?.text ?? ''
 
   const jsonMatch = raw.match(/\{[\s\S]*\}/)
   if (!jsonMatch) throw new Error('LLM did not return valid JSON for briefing')
