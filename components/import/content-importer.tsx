@@ -73,7 +73,7 @@ export function ContentImporter() {
 
   function reset() { setStatus('idle'); setMessage(''); setStats(null); setUrl('') }
 
-  async function submit(payload: { content?: string; url?: string; fileName?: string; source: string }) {
+  async function submit(payload: { content?: string; url?: string; fileName?: string; articles?: object[]; source: string }) {
     setStatus('processing')
     setMessage('Extracting content and building memory…')
     const res = await fetch('/api/import', {
@@ -104,28 +104,72 @@ export function ContentImporter() {
     setStatus('uploading')
     setMessage('Reading file…')
 
-    // ZIP files are binary — unzip first, extract the LinkedIn CSV inside
+    // ZIP files are binary — unzip first, then find LinkedIn content inside
     if (file.name.toLowerCase().endsWith('.zip')) {
       try {
         const buf = await file.arrayBuffer()
         const zip = await JSZip.loadAsync(buf)
 
-        // LinkedIn exports contain Shares.csv or Share_Info.csv
+        // ── Try CSV first (Full export: Shares.csv / Share_Info.csv) ──────
         const csvEntry =
           zip.file(/Shares\.csv$/i)[0] ??
           zip.file(/Share_Info\.csv$/i)[0] ??
-          zip.file(/Posts\.csv$/i)[0] ??
-          zip.file(/\.csv$/i)[0]
+          zip.file(/Posts\.csv$/i)[0]
 
-        if (!csvEntry) {
-          setStatus('error')
-          setMessage('No CSV file found in the ZIP. Make sure this is a LinkedIn data export (Settings → Data Privacy → Get a copy of your data).')
+        if (csvEntry) {
+          setMessage(`Found ${csvEntry.name} — processing…`)
+          const csvText = await csvEntry.async('text')
+          await submit({ content: csvText, fileName: csvEntry.name, source: active })
           return
         }
 
-        setMessage(`Found ${csvEntry.name} — processing…`)
-        const csvText = await csvEntry.async('text')
-        await submit({ content: csvText, fileName: csvEntry.name, source: active })
+        // ── Basic export: Articles are HTML files under Articles/Articles/ ─
+        const htmlFiles = zip.file(/Articles\/Articles\/.*\.html?$/i)
+
+        if (htmlFiles.length > 0) {
+          setMessage(`Found ${htmlFiles.length} articles — extracting…`)
+
+          const articles = await Promise.all(htmlFiles.map(async entry => {
+            const html  = await entry.async('text')
+            const fname = entry.name.split('/').pop() ?? entry.name
+
+            // Title: from <title> tag first, then filename
+            const titleTag = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]?.trim()
+            const fnameBase = fname.replace(/\.html?$/i, '')
+            // Filename format: "YYYY-MM-DD HH:MM:SS.0-Title" or just a slug
+            const datePrefix = fnameBase.match(/^(\d{4}-\d{2}-\d{2})[\s\d:.]*-?(.*)$/)
+            const title = titleTag || (datePrefix?.[2]?.trim()) || fnameBase.replace(/-/g, ' ')
+            const publishedAt = datePrefix?.[1] ? new Date(datePrefix[1]).toISOString() : null
+
+            // Strip HTML → plain text
+            const body = html
+              .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ')
+              .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ')
+              .replace(/<[^>]+>/g, ' ')
+              .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+              .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ')
+              .replace(/\s{2,}/g, '\n')
+              .trim()
+
+            return { title, body, publishedAt, platform: 'linkedin' }
+          }))
+
+          // Filter out empty articles
+          const valid = articles.filter(a => a.body.length > 50)
+          if (!valid.length) {
+            setStatus('error')
+            setMessage('Articles found but all were empty after processing.')
+            return
+          }
+
+          setMessage(`Processing ${valid.length} articles…`)
+          await submit({ articles: valid, source: active } as Parameters<typeof submit>[0])
+          return
+        }
+
+        // Nothing useful found
+        setStatus('error')
+        setMessage('No LinkedIn posts or articles found in this ZIP. Try the Full export (Settings → Data Privacy → Get a copy of your data → select Posts & Articles).')
       } catch {
         setStatus('error')
         setMessage('Could not read ZIP file. Make sure it is a valid LinkedIn export.')

@@ -60,30 +60,59 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => null)
   if (!body) return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
 
-  let content: string
-  let fileName: string
-
-  if (body.url) {
-    // URL-based import (Medium, Substack, GitHub, LinkedIn article)
-    try {
-      const { text, title } = await fetchUrlAsText(body.url as string)
-      content  = `# ${title}\n\n${text}`
-      fileName = `${(body.source as string | undefined) ?? 'url'}-import.md`
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to fetch URL'
-      return NextResponse.json({ error: msg }, { status: 422 })
-    }
-  } else if (body.content && body.fileName) {
-    content  = body.content as string
-    fileName = body.fileName as string
-  } else {
-    return NextResponse.json({ error: 'Provide either a URL or file content + fileName' }, { status: 400 })
+  // ── Parse into a unified format ───────────────────────────────────────────
+  type ParsedItem = {
+    externalId:  string
+    title?:      string
+    body:        string
+    url?:        string
+    publishedAt: Date | null
+    platform:    'linkedin'
   }
 
-  // Parse content based on file type
-  const parsed = fileName.endsWith('.csv')
-    ? parseLinkedInCSV(content)
-    : [parseDocumentText(content, fileName)]
+  let parsed: ParsedItem[]
+
+  if (body.articles && Array.isArray(body.articles)) {
+    // LinkedIn Basic export: array of {title, body, publishedAt} sent from client
+    parsed = (body.articles as { title?: string; body: string; publishedAt?: string; url?: string }[])
+      .filter(a => a.body?.trim().length > 50)
+      .map((a, i) => ({
+        externalId:  `linkedin-article-${Date.now()}-${i}`,
+        title:       a.title,
+        body:        a.body.trim(),
+        url:         a.url,
+        publishedAt: a.publishedAt ? new Date(a.publishedAt) : null,
+        platform:    'linkedin' as const,
+      }))
+
+    if (!parsed.length) {
+      return NextResponse.json({ error: 'No articles with content found' }, { status: 422 })
+    }
+
+  } else {
+    let content: string
+    let fileName: string
+
+    if (body.url) {
+      try {
+        const { text, title } = await fetchUrlAsText(body.url as string)
+        content  = `# ${title}\n\n${text}`
+        fileName = `${(body.source as string | undefined) ?? 'url'}-import.md`
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Failed to fetch URL'
+        return NextResponse.json({ error: msg }, { status: 422 })
+      }
+    } else if (body.content && body.fileName) {
+      content  = body.content as string
+      fileName = body.fileName as string
+    } else {
+      return NextResponse.json({ error: 'Provide either a URL, file content + fileName, or an articles array' }, { status: 400 })
+    }
+
+    parsed = fileName.endsWith('.csv')
+      ? parseLinkedInCSV(content)
+      : [parseDocumentText(content, fileName)]
+  }
 
   if (!parsed.length) {
     return NextResponse.json({ error: 'No content found in file' }, { status: 422 })
