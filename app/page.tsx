@@ -1,7 +1,8 @@
 import { redirect } from 'next/navigation'
 import { getServerAuth } from '@/lib/auth'
+import { getEarlyBirdStatus } from '@/lib/stripe/early-bird'
 import Link from 'next/link'
-import { ArrowRight, Sparkles, CheckCircle, Brain, Zap, Shield, TrendingUp, MessageCircle, Repeat, ChevronDown } from 'lucide-react'
+import { ArrowRight, Sparkles, CheckCircle, Brain, Zap, Shield, TrendingUp, MessageCircle, Repeat, ChevronDown, Timer } from 'lucide-react'
 
 /* ─── Data ─────────────────────────────────────────────────── */
 
@@ -64,8 +65,34 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 export default async function MarketingPage() {
   const { clerkId } = await getServerAuth()
   if (clerkId) redirect('/dashboard')
+
+  const eb = await getEarlyBirdStatus()
+  const spotsTaken = eb.total - eb.remaining
+  const pctTaken   = Math.round((spotsTaken / eb.total) * 100)
+
   return (
     <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif', color: '#1a1a2e', background: '#fff', minHeight: '100vh', lineHeight: 1.65 }}>
+
+      {/* ── EARLY BIRD ANNOUNCEMENT BAR ───────────────────────── */}
+      {eb.active && (
+        <div style={{ background: 'linear-gradient(90deg, #ea580c 0%, #f97316 50%, #ea580c 100%)', padding: '10px 24px', textAlign: 'center', position: 'sticky', top: 0, zIndex: 200 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 4 }}>
+            <Timer size={14} color="#fff" />
+            <span style={{ color: '#fff', fontWeight: 800, fontSize: 14 }}>
+              Early Bird — 50% off your first month
+            </span>
+            <span style={{ background: 'rgba(255,255,255,0.25)', color: '#fff', fontSize: 12, fontWeight: 700, padding: '2px 10px', borderRadius: 999 }}>
+              {eb.remaining} of {eb.total} spots left
+            </span>
+            <a href="#pricing" style={{ color: '#fff', fontSize: 12, fontWeight: 700, textDecoration: 'underline', opacity: 0.9 }}>
+              Claim offer →
+            </a>
+          </div>
+          <div style={{ maxWidth: 240, margin: '0 auto', background: 'rgba(255,255,255,0.3)', borderRadius: 999, height: 3 }}>
+            <div style={{ width: `${pctTaken}%`, height: '100%', background: '#fff', borderRadius: 999, minWidth: 4 }} />
+          </div>
+        </div>
+      )}
 
       <Nav />
 
@@ -103,12 +130,25 @@ export default async function MarketingPage() {
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '8px 28px' }}>
-            {['Free tier available', 'Bring your own Anthropic key', '5-min setup', 'Cancel Pro any time'].map(p => (
+            {[
+              'Free tier available',
+              'Bring your own Anthropic key',
+              '5-min setup',
+              'Cancel any time',
+            ].map(p => (
               <div key={p} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'rgba(165,180,252,0.55)' }}>
                 <CheckCircle size={12} color="#34d399" />
                 {p}
               </div>
             ))}
+            {eb.active && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700 }}>
+                <Timer size={12} color="#fb923c" />
+                <span style={{ background: 'linear-gradient(90deg, #fb923c, #f97316)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+                  50% off for first {eb.total} users — {eb.remaining} left
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -198,27 +238,36 @@ export default async function MarketingPage() {
           <h2 style={{ fontSize: 'clamp(24px, 3.5vw, 36px)', fontWeight: 800, color: '#0f0c29', marginBottom: 10, letterSpacing: '-0.5px' }}>
             Simple, honest pricing
           </h2>
-          <p style={{ fontSize: 16, color: '#4b5563', marginBottom: 48, maxWidth: 460, lineHeight: 1.7 }}>
-            Start free. Upgrade only if it's worth it. No dark patterns, no annual lock-in pushed at checkout.
-          </p>
+
+          {eb.active ? (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 10, padding: '10px 18px', marginBottom: 32 }}>
+              <Timer size={16} color="#ea580c" />
+              <span style={{ fontSize: 14, fontWeight: 700, color: '#c2410c' }}>
+                Early Bird: 50% off your first month — {eb.remaining} of {eb.total} spots remaining
+              </span>
+            </div>
+          ) : (
+            <p style={{ fontSize: 16, color: '#4b5563', marginBottom: 48, maxWidth: 460, lineHeight: 1.7 }}>
+              Start free. Upgrade only if it&apos;s worth it. No dark patterns, no annual lock-in pushed at checkout.
+            </p>
+          )}
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, alignItems: 'start' }}>
-            {/* Starter */}
+            {/* Free */}
             <div style={{ background: '#fff', border: '1px solid #e0e7ff', borderRadius: 18, padding: '36px 30px' }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#6b7280', marginBottom: 8 }}>Starter</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#6b7280', marginBottom: 8 }}>Free</div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 6 }}>
                 <span style={{ fontSize: 44, fontWeight: 900, color: '#0f0c29', letterSpacing: '-2px' }}>$0</span>
                 <span style={{ fontSize: 15, color: '#6b7280' }}>/month</span>
               </div>
-              <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 28, lineHeight: 1.65 }}>Bring your own Anthropic API key (about $0.10–0.50/month in usage). Everything is fully functional.</p>
+              <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 28, lineHeight: 1.65 }}>20 AI generations per month. No credit card required. Everything is fully functional to start.</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 32 }}>
                 {[
-                  'Unlimited post imports',
+                  'Post history import',
                   'Full knowledge graph — topics, hooks, audience questions',
                   'Daily briefing — 3–5 ideas per day',
                   'Repetition guard',
-                  'Competitor gap in every idea',
-                  'You supply the Anthropic API key',
+                  '20 AI generations / month',
                 ].map(f => (
                   <div key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                     <CheckCircle size={14} color="#6366f1" style={{ flexShrink: 0, marginTop: 2 }} />
@@ -231,21 +280,44 @@ export default async function MarketingPage() {
               </Link>
             </div>
 
-            {/* Pro */}
-            <div style={{ background: 'linear-gradient(160deg, #0f0c29 0%, #302b63 100%)', border: '1px solid rgba(165,180,252,0.15)', borderRadius: 18, padding: '36px 30px' }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#a5b4fc', marginBottom: 8 }}>Pro</div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 6 }}>
-                <span style={{ fontSize: 44, fontWeight: 900, color: '#fff', letterSpacing: '-2px' }}>$29</span>
-                <span style={{ fontSize: 15, color: 'rgba(165,180,252,0.55)' }}>/month</span>
-              </div>
-              <p style={{ fontSize: 13, color: 'rgba(165,180,252,0.6)', marginBottom: 28, lineHeight: 1.65 }}>Managed Claude credits included — no API key needed. For creators who want zero friction and are using this daily.</p>
+            {/* Creator — highlighted with early bird if active */}
+            <div style={{ background: 'linear-gradient(160deg, #0f0c29 0%, #302b63 100%)', border: eb.active ? '2px solid #f97316' : '1px solid rgba(165,180,252,0.15)', borderRadius: 18, padding: '36px 30px', position: 'relative' }}>
+
+              {eb.active && (
+                <div style={{ position: 'absolute', top: -14, left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(90deg, #f97316, #ea580c)', color: '#fff', fontSize: 12, fontWeight: 700, padding: '4px 16px', borderRadius: 999, whiteSpace: 'nowrap' }}>
+                  50% off — Early Bird
+                </div>
+              )}
+
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#a5b4fc', marginBottom: 8 }}>Creator</div>
+
+              {eb.active ? (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
+                    <span style={{ fontSize: 44, fontWeight: 900, color: '#fff', letterSpacing: '-2px' }}>$14</span>
+                    <span style={{ fontSize: 15, color: 'rgba(165,180,252,0.55)' }}>first month</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+                    <span style={{ fontSize: 14, color: 'rgba(165,180,252,0.45)', textDecoration: 'line-through' }}>$29/mo</span>
+                    <span style={{ fontSize: 12, color: '#fb923c', fontWeight: 700, background: 'rgba(251,146,60,0.15)', padding: '2px 8px', borderRadius: 999 }}>then $29/mo</span>
+                  </div>
+                </>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 6 }}>
+                  <span style={{ fontSize: 44, fontWeight: 900, color: '#fff', letterSpacing: '-2px' }}>$29</span>
+                  <span style={{ fontSize: 15, color: 'rgba(165,180,252,0.55)' }}>/month</span>
+                </div>
+              )}
+
+              <p style={{ fontSize: 13, color: 'rgba(165,180,252,0.6)', marginBottom: 28, lineHeight: 1.65 }}>150 AI generations/month. Bring your own key for unlimited usage. For creators using this daily.</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 32 }}>
                 {[
-                  'Everything in Starter',
-                  'Managed Claude credits — no API key needed',
-                  'Unlimited on-demand briefing generation',
-                  'Priority support (direct reply, not a ticket queue)',
-                  'Input on the roadmap — early users shape the product',
+                  'Everything in Free',
+                  '150 AI generations / month',
+                  'Bring your own API key (unlimited)',
+                  'Full prompt vault',
+                  'Hook performance analytics',
+                  'Priority support',
                 ].map(f => (
                   <div key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                     <CheckCircle size={14} color="#34d399" style={{ flexShrink: 0, marginTop: 2 }} />
@@ -253,11 +325,28 @@ export default async function MarketingPage() {
                   </div>
                 ))}
               </div>
-              <Link href="/sign-up" style={{ display: 'block', textAlign: 'center', padding: '13px', background: '#4f46e5', color: '#fff', borderRadius: 9, fontSize: 14, fontWeight: 700, textDecoration: 'none', boxShadow: '0 0 20px rgba(99,102,241,0.4)' }}>
-                Upgrade to Pro
+
+              <Link
+                href="/pricing"
+                style={{
+                  display: 'block', textAlign: 'center', padding: '13px',
+                  background: eb.active ? 'linear-gradient(90deg, #f97316, #ea580c)' : '#4f46e5',
+                  color: '#fff', borderRadius: 9, fontSize: 14, fontWeight: 700,
+                  textDecoration: 'none', boxShadow: eb.active ? '0 0 20px rgba(249,115,22,0.4)' : '0 0 20px rgba(99,102,241,0.4)',
+                }}
+              >
+                {eb.active ? `Claim 50% off — ${eb.remaining} spots left` : 'Get Creator'}
               </Link>
-              <p style={{ textAlign: 'center', fontSize: 11, color: 'rgba(165,180,252,0.35)', marginTop: 10 }}>Cancel any time from your dashboard</p>
+              <p style={{ textAlign: 'center', fontSize: 11, color: 'rgba(165,180,252,0.35)', marginTop: 10 }}>
+                {eb.active ? 'Discount applied automatically at checkout' : 'Cancel any time from your dashboard'}
+              </p>
             </div>
+          </div>
+
+          <div style={{ textAlign: 'center', marginTop: 24 }}>
+            <Link href="/pricing" style={{ fontSize: 13, color: '#4f46e5', fontWeight: 600, textDecoration: 'none' }}>
+              See all plans including Creator Pro and Enterprise →
+            </Link>
           </div>
         </div>
       </section>
@@ -293,12 +382,28 @@ export default async function MarketingPage() {
           <p style={{ fontSize: 17, color: 'rgba(255,255,255,0.5)', marginBottom: 14, lineHeight: 1.65 }}>
             This is early software. It works, and it'll get better — especially with early users who care enough to give feedback.
           </p>
-          <p style={{ fontSize: 14, color: 'rgba(165,180,252,0.45)', marginBottom: 40 }}>
-            Free tier available. No credit card. Built in public.
-          </p>
-          <Link href="/sign-up" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '17px 36px', background: '#4f46e5', color: '#fff', borderRadius: 12, fontSize: 16, fontWeight: 800, textDecoration: 'none', boxShadow: '0 0 40px rgba(99,102,241,0.45)', letterSpacing: '-0.2px' }}>
-            Get started free <ArrowRight size={18} />
-          </Link>
+          {eb.active ? (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(249,115,22,0.15)', border: '1px solid rgba(249,115,22,0.3)', borderRadius: 10, padding: '8px 18px', marginBottom: 32 }}>
+              <Timer size={14} color="#fb923c" />
+              <span style={{ fontSize: 13, color: '#fb923c', fontWeight: 700 }}>
+                Early bird: 50% off your first month — {eb.remaining} spots left
+              </span>
+            </div>
+          ) : (
+            <p style={{ fontSize: 14, color: 'rgba(165,180,252,0.45)', marginBottom: 40 }}>
+              Free tier available. No credit card. Built in public.
+            </p>
+          )}
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginTop: eb.active ? 0 : 0 }}>
+            <Link href="/sign-up" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '17px 36px', background: '#4f46e5', color: '#fff', borderRadius: 12, fontSize: 16, fontWeight: 800, textDecoration: 'none', boxShadow: '0 0 40px rgba(99,102,241,0.45)', letterSpacing: '-0.2px' }}>
+              Get started free <ArrowRight size={18} />
+            </Link>
+            {eb.active && (
+              <Link href="/pricing" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '17px 36px', background: 'linear-gradient(90deg, #f97316, #ea580c)', color: '#fff', borderRadius: 12, fontSize: 16, fontWeight: 800, textDecoration: 'none', boxShadow: '0 0 30px rgba(249,115,22,0.4)', letterSpacing: '-0.2px' }}>
+                Claim 50% off <ArrowRight size={18} />
+              </Link>
+            )}
+          </div>
         </div>
       </section>
 
