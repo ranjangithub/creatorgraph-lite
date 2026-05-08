@@ -147,3 +147,35 @@ export async function updateDraftStatus(id: string, userId: string, status: stri
     .set({ status, updatedAt: new Date() })
     .where(and(eq(generatedDrafts.id, id), eq(generatedDrafts.userId, userId)))
 }
+
+export async function getDraft(id: string, userId: string) {
+  const [row] = await db
+    .select()
+    .from(generatedDrafts)
+    .where(and(eq(generatedDrafts.id, id), eq(generatedDrafts.userId, userId)))
+    .limit(1)
+  return row ?? null
+}
+
+export async function listDrafts(userId: string, filters: {
+  platform?:    string
+  status?:      string
+  ideaId?:      string
+  limit?:       number
+  offset?:      number
+} = {}) {
+  const { platform, status, ideaId, limit = 20, offset = 0 } = filters
+  const conditions = [eq(generatedDrafts.userId, userId)]
+  if (platform) conditions.push(eq(generatedDrafts.platform, platform as typeof generatedDrafts.$inferInsert['platform']))
+  if (status)   conditions.push(eq(generatedDrafts.status,   status))
+  if (ideaId)   conditions.push(eq(generatedDrafts.ideaId,   ideaId))
+
+  const rows = await db
+    .select()
+    .from(generatedDrafts)
+    .where(and(...conditions))
+    .orderBy(desc(generatedDrafts.createdAt))
+    .limit(limit)
+    .offset(offset)
+  return rows
+}
