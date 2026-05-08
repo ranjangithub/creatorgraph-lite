@@ -10,6 +10,7 @@ const isPublicRoute = createRouteMatcher([
   '/api/webhooks(.*)',
   '/api/stripe/webhook',
   '/api/early-bird',
+  '/api/chat',
 ])
 
 const clerk = clerkMiddleware(async (auth, r) => {
