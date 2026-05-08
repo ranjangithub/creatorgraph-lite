@@ -1,8 +1,9 @@
+import React from 'react'
 import { UserButton } from '@clerk/nextjs'
 import { MOCK_AUTH, MOCK_USER_NAME } from '@/lib/auth'
 
 interface HeaderProps {
-  title:        string
+  title:        React.ReactNode
   description?: string
 }
 

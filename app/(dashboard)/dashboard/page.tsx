@@ -9,15 +9,7 @@ import { getTopics, getHooks, getOpenQuestions, getAudienceSegments } from '@/li
 import { formatDate } from '@/lib/utils'
 import { Brain, FileText, Lightbulb, TrendingUp, Sparkles, AlertCircle, Users, Zap, ArrowRight, Upload } from 'lucide-react'
 import Link from 'next/link'
-
-/* ── helpers ──────────────────────────────────────────────────────────────── */
-
-function hour() { return new Date().getHours() }
-function greeting(name: string | null) {
-  const h = hour()
-  const time = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'
-  return name ? `${time}, ${name}` : time
-}
+import { Greeting } from '@/components/ui/greeting'
 
 const TOPIC_COLORS = [
   { color: '#4f46e5', bg: '#ede9fe', border: '#c4b5fd' },
@@ -89,7 +81,7 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <Header title={greeting(firstName)} description={formatDate(new Date())} />
+      <Header title={<Greeting name={firstName} />} description={formatDate(new Date())} />
 
       <div style={{ flex: 1, padding: '28px', maxWidth: 920, display: 'flex', flexDirection: 'column', gap: 28 }}>
 
