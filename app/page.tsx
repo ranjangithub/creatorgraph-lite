@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { getServerAuth } from '@/lib/auth'
 import { getEarlyBirdStatus } from '@/lib/stripe/early-bird'
 import Link from 'next/link'
-import { ArrowRight, Sparkles, CheckCircle, Brain, Zap, Shield, TrendingUp, MessageCircle, Repeat, ChevronDown, Timer } from 'lucide-react'
+import { ArrowRight, Sparkles, CheckCircle, Brain, Zap, Shield, TrendingUp, MessageCircle, Repeat, ChevronDown, Globe, BookOpen, BarChart2, FileText, Users, Layers } from 'lucide-react'
 
 /* ─── Data ─────────────────────────────────────────────────── */
 
@@ -14,21 +14,24 @@ const pain = [
 ]
 
 const features = [
-  { icon: Brain,         color: '#4f46e5', bg: '#ede9fe', border: '#c4b5fd', title: 'Your entire content history becomes context', body: 'Every post you\'ve ever written is analysed, tagged, and compiled into a structured knowledge base. Your AI advisor knows your full archive — not just the last 5 posts.' },
-  { icon: Repeat,        color: '#dc2626', bg: '#fee2e2', border: '#fca5a5', title: 'Repetition guard', body: 'Before suggesting anything, CreatorGraph checks your full archive. Every idea is tagged: New angle, Sequel, or Repeat. You\'ll know before you write a word.' },
-  { icon: MessageCircle, color: '#0891b2', bg: '#e0f2fe', border: '#7dd3fc', title: 'Open audience questions surfaced', body: 'Questions your audience keeps asking — extracted from your post context — are tracked as open items. You see the gaps nobody in your niche has answered yet.' },
-  { icon: TrendingUp,    color: '#059669', bg: '#ecfdf5', border: '#6ee7b7', title: 'Competitor gap in every idea', body: 'Every suggested idea includes what angle your niche peers are missing. You write things only you can write, from an operator\'s perspective.' },
-  { icon: Zap,           color: '#d97706', bg: '#fffbeb', border: '#fde68a', title: 'Daily briefing in seconds', body: 'Each morning your knowledge graph loads and you get 3–5 ranked content ideas with rationale, hook, audience fit, and validation score.' },
-  { icon: Shield,        color: '#7c3aed', bg: '#f3e8ff', border: '#d8b4fe', title: 'Evidence behind every idea', body: 'No gut-feel content strategy. Every suggestion shows you exactly why — which topics you cover, what signals support it, what the audience pain point is.' },
+  { icon: Brain,         color: '#4f46e5', bg: '#ede9fe', border: '#c4b5fd', title: 'Your entire content history becomes context', body: 'Every post you\'ve ever written is analysed, tagged, and compiled into a structured knowledge graph. Your AI advisor knows your full archive — not just the last 5 posts.' },
+  { icon: Repeat,        color: '#dc2626', bg: '#fee2e2', border: '#fca5a5', title: 'Repetition guard built in', body: 'Before suggesting anything, CreatorGraph checks your full archive and today\'s already-suggested ideas. Every idea is de-duplicated. You\'ll never be told to write the same thing twice.' },
+  { icon: MessageCircle, color: '#0891b2', bg: '#e0f2fe', border: '#7dd3fc', title: 'Audience questions surfaced automatically', body: 'Questions your readers keep asking — extracted from your post context — are tracked as open items. You see the gaps nobody in your niche has answered yet.' },
+  { icon: Globe,         color: '#0891b2', bg: '#e0f2fe', border: '#7dd3fc', title: 'Trending news in your niche, filtered to signal', body: 'Trends pulls stories from Hacker News and NewsAPI, filters them against your knowledge graph topics, removes noise (hardware, job posts, product reviews), and surfaces up to 10 high-quality stories every 4 hours. One click turns any story into a post brief.' },
+  { icon: Zap,           color: '#d97706', bg: '#fffbeb', border: '#fde68a', title: 'Daily briefing in seconds, expand to a full week', body: 'Each morning your knowledge graph loads and you get 3–5 ranked ideas with rationale, hook type, audience fit, and competitor gap. Hit Expand to plan the entire week in one go.' },
+  { icon: BookOpen,      color: '#7c3aed', bg: '#f3e8ff', border: '#d8b4fe', title: 'Prompt Vault — drafts in your exact voice', body: 'Save your voice, tone, format rules, and hashtags as reusable templates per platform. Accept an idea, pick a template, get a ready-to-post draft that actually sounds like you — not generic AI.' },
+  { icon: BarChart2,     color: '#059669', bg: '#ecfdf5', border: '#6ee7b7', title: 'Hook performance analytics', body: 'CreatorGraph tracks which hook types — question, statistic, story, contrarian, list, bold claim — drive the most engagement for your posts. Briefings are ranked accordingly, so your best-performing patterns stay front and centre.' },
+  { icon: Users,         color: '#c2410c', bg: '#fff7ed', border: '#fed7aa', title: 'Audience segments with open questions', body: 'Know exactly who reads your content: their role, their pain points, what they keep asking (\"What they\'re asking\"), and what topics you\'re planning to cover for them (\"What\'s on your mind\").' },
+  { icon: Layers,        color: '#475569', bg: '#f1f5f9', border: '#cbd5e1', title: 'Multi-platform import — one unified graph', body: 'Import from LinkedIn, YouTube, Medium, Substack, GitHub, Instagram, or any local file. All sources feed one knowledge graph, so topics from your newsletters and your videos are weighed together.' },
 ]
 
 const faq = [
-  { q: 'Is my LinkedIn data safe?', a: 'Your export file is processed and stored in your own database instance. We don\'t train on your data or share it.' },
+  { q: 'Is my content data safe?', a: 'Your data is stored in an isolated database instance. We don\'t train on your data or share it with other users. Your import file is processed once and discarded — only the extracted structured graph is stored.' },
   { q: 'Do I need a LinkedIn Premium account?', a: 'No. The data export works with any LinkedIn account — free or premium. It\'s a standard privacy feature under Settings → Data Privacy.' },
-  { q: 'What AI model powers this?', a: 'Anthropic Claude (claude-3-5-haiku). On the Starter plan you bring your own API key. On Pro, credits are included.' },
-  { q: 'How long does setup take?', a: 'About 5 minutes. Upload your LinkedIn export, wait ~60 seconds for Claude to build your knowledge graph, then generate your first briefing.' },
-  { q: 'Does it work for niches outside tech?', a: 'The knowledge graph pattern is niche-agnostic — it works anywhere you have a content archive. Early testing has been tech-focused but the system is general.' },
-  { q: 'This is a new product. What if it doesn\'t work out?', a: 'Fair question. The Starter plan is free and your data export is just a file — you can delete it any time. Pro subscribers can cancel any month. We\'ll give at least 30 days notice of any shutdown.' },
+  { q: 'What AI model powers this?', a: 'Llama 3.3 70B Versatile via Groq. It powers knowledge graph extraction, daily briefings, draft generation, the Trends briefing, and the chat assistant. The model is configurable without a redeploy.' },
+  { q: 'How long does setup take?', a: 'About 5 minutes. Upload your LinkedIn export, wait ~60 seconds for your knowledge graph to be built, then generate your first briefing.' },
+  { q: 'Does it work for niches outside tech?', a: 'Yes. The knowledge graph is niche-agnostic — it learns from what you\'ve actually written. Tech, marketing, finance, healthcare, design, coaching. The more content you have, the better it gets.' },
+  { q: 'This is a new product. What if it doesn\'t work out?', a: 'Fair question. The free plan requires no card. Pro subscribers can cancel any month. If we ever shut down, we\'ll give at least 30 days notice and provide a full data export.' },
 ]
 
 /* ─── Sub-components ────────────────────────────────────────── */
@@ -46,6 +49,8 @@ function Nav() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <a href="#pricing" style={{ color: 'rgba(165,180,252,0.7)', fontSize: 13, fontWeight: 500, padding: '6px 12px', textDecoration: 'none' }}>Pricing</a>
+          <Link href="/about"   style={{ color: 'rgba(165,180,252,0.7)', fontSize: 13, fontWeight: 500, padding: '6px 12px', textDecoration: 'none' }}>About</Link>
+          <Link href="/faq"     style={{ color: 'rgba(165,180,252,0.7)', fontSize: 13, fontWeight: 500, padding: '6px 12px', textDecoration: 'none' }}>FAQ</Link>
           <Link href="/sign-in" style={{ color: 'rgba(165,180,252,0.7)', fontSize: 13, fontWeight: 500, padding: '6px 12px', textDecoration: 'none' }}>Sign in</Link>
           <Link href="/sign-up" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 18px', background: '#4f46e5', color: '#fff', borderRadius: 8, fontSize: 13, fontWeight: 700, textDecoration: 'none', boxShadow: '0 0 16px rgba(99,102,241,0.4)' }}>
             Try it free <ArrowRight size={13} />
@@ -160,7 +165,7 @@ export default async function MarketingPage() {
           )}
 
           <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '8px 28px' }}>
-            {['Free tier available', 'Bring your own Anthropic key', '5-min setup', 'Cancel any time'].map(p => (
+            {['Free tier available', 'No credit card required', '5-min setup', 'Cancel any time'].map(p => (
               <div key={p} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'rgba(165,180,252,0.55)' }}>
                 <CheckCircle size={12} color="#34d399" />
                 {p}
@@ -229,10 +234,10 @@ export default async function MarketingPage() {
         <div style={{ maxWidth: 960, margin: '0 auto' }}>
           <SectionLabel>What's built</SectionLabel>
           <h2 style={{ fontSize: 'clamp(24px, 3.5vw, 36px)', fontWeight: 800, color: '#0f0c29', marginBottom: 10, letterSpacing: '-0.5px' }}>
-            A content advisor that knows your archive
+            Every tool a serious creator needs, in one place
           </h2>
-          <p style={{ fontSize: 15, color: '#6b7280', marginBottom: 48, maxWidth: 520, lineHeight: 1.7 }}>
-            These features are live today. Not a roadmap — things you can actually use when you sign up.
+          <p style={{ fontSize: 15, color: '#6b7280', marginBottom: 48, maxWidth: 560, lineHeight: 1.7 }}>
+            These features are live today — not a roadmap. Everything you see below works when you sign up.
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>
             {features.map(({ icon: Icon, color, bg, border, title, body }) => (
@@ -281,10 +286,11 @@ export default async function MarketingPage() {
               <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 28, lineHeight: 1.65 }}>20 AI generations per month. No credit card required. Everything is fully functional to start.</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 32 }}>
                 {[
-                  'Post history import',
-                  'Full knowledge graph — topics, hooks, audience questions',
+                  'Multi-platform content import',
+                  'Full knowledge graph — topics, hooks, audience segments',
                   'Daily briefing — 3–5 ideas per day',
                   'Repetition guard',
+                  'Prompt Vault — voice templates per platform',
                   '20 AI generations / month',
                 ].map(f => (
                   <div key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
@@ -329,7 +335,7 @@ export default async function MarketingPage() {
 
               <p style={{ fontSize: 13, color: 'rgba(165,180,252,0.6)', marginBottom: 28, lineHeight: 1.65 }}>150 AI generations/month. Bring your own key for unlimited usage. For creators using this daily.</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 32 }}>
-                {['Everything in Free', '150 AI generations / month', 'Bring your own API key (unlimited)', 'Full prompt vault', 'Hook performance analytics', 'Priority support'].map(f => (
+                {['Everything in Free', '150 AI generations / month', 'Trends — niche news feed + 15-day history', 'Expand briefing — plan a full week', 'Hook performance analytics', 'Audience segment deep-dive', 'Priority support'].map(f => (
                   <div key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                     <CheckCircle size={14} color="#34d399" style={{ flexShrink: 0, marginTop: 2 }} />
                     <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', lineHeight: 1.5 }}>{f}</span>
@@ -427,7 +433,12 @@ export default async function MarketingPage() {
             </div>
             <span style={{ fontWeight: 800, color: 'rgba(255,255,255,0.6)', fontSize: 13 }}>CreatorGraph</span>
           </div>
-          <p style={{ fontSize: 12, color: 'rgba(165,180,252,0.2)' }}>Built with Next.js · Drizzle · Supabase · Anthropic Claude</p>
+          <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
+            <Link href="/about"   style={{ fontSize: 12, color: 'rgba(165,180,252,0.35)', textDecoration: 'none' }}>About</Link>
+            <Link href="/faq"     style={{ fontSize: 12, color: 'rgba(165,180,252,0.35)', textDecoration: 'none' }}>FAQ</Link>
+            <Link href="/privacy" style={{ fontSize: 12, color: 'rgba(165,180,252,0.35)', textDecoration: 'none' }}>Privacy</Link>
+            <span style={{ fontSize: 12, color: 'rgba(165,180,252,0.15)' }}>Built with Next.js · Drizzle · Supabase · Groq</span>
+          </div>
         </div>
       </footer>
 

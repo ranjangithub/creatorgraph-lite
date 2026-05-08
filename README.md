@@ -341,8 +341,8 @@ app/
   admin/                 # Developer admin panel (guarded by ADMIN_EMAILS)
     layout.tsx           # Auth gate — redirects non-admins to /dashboard
     page.tsx             # Server component — fetches settings + users, renders tabs
-  about/                 # About page
-  faq/                   # FAQ page
+  about/                 # About page — mission, values, tech stack
+  faq/                   # FAQ page — 30+ questions across 6 categories with jump links
   privacy/               # Privacy policy + disclaimers
   api/
     admin/

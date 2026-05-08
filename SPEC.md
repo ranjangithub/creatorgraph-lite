@@ -359,15 +359,42 @@ Summary stats: total users, posts imported, briefings run, ideas generated. Sear
 
 ## 15. Public pages
 
-| Route      | Purpose                                                       |
-|------------|---------------------------------------------------------------|
-| `/`        | Landing page — pain points, features, pricing, FAQ, CTA      |
-| `/about`   | Mission, product values, tech stack, team                     |
-| `/faq`     | 16 questions across 4 categories (product, data, billing, misc)|
-| `/privacy` | Privacy policy, third-party services, disclaimers, liability  |
-| `/pricing` | Plan comparison + Stripe checkout links                       |
-| `/sign-in` | Clerk-hosted sign-in                                          |
-| `/sign-up` | Clerk-hosted sign-up                                          |
+| Route      | Purpose                                                                      |
+|------------|------------------------------------------------------------------------------|
+| `/`        | Landing page — pain points, 9-feature grid, how it works, pricing, mini FAQ  |
+| `/about`   | Mission, product values, tech stack, team                                    |
+| `/faq`     | 30+ questions across 6 categories (getting started, features, import, AI, data & privacy, billing); category jump links at top |
+| `/privacy` | Privacy policy, third-party services, disclaimers, liability                 |
+| `/pricing` | Plan comparison + Stripe checkout links                                      |
+| `/sign-in` | Clerk-hosted sign-in                                                         |
+| `/sign-up` | Clerk-hosted sign-up                                                         |
+
+### Landing page features grid
+
+The `/` page features section shows 9 live features:
+
+| Feature                             | Icon        |
+|-------------------------------------|-------------|
+| Entire content history as context   | Brain       |
+| Repetition guard                    | Repeat      |
+| Audience questions surfaced         | MessageCircle|
+| Trending news filtered to niche     | Globe       |
+| Daily briefing + expand to week     | Zap         |
+| Prompt Vault — drafts in your voice | BookOpen    |
+| Hook performance analytics          | BarChart2   |
+| Audience segments with open questions| Users      |
+| Multi-platform import               | Layers      |
+
+### FAQ categories
+
+| Category              | Questions |
+|-----------------------|-----------|
+| Getting started       | 5         |
+| Features & capabilities| 8        |
+| Import & content      | 4         |
+| AI & technology       | 4         |
+| Data & privacy        | 4         |
+| Plans & billing       | 4         |
 
 ---
 
